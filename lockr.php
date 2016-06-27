@@ -6,7 +6,7 @@
 Plugin Name: Lockr
 Plugin URI: https://lockr.io/
 Description: Integrate with the Lockr hosted key management platform. Secure all your API and encryption keys according to industry best practices. With Lockr, key management is easy. 
-Version: 1.0.0
+Version: 2.0
 Author: Lockr
 Author URI: htts://lockr.io/
 License: GPLv2 or later
