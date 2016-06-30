@@ -24,7 +24,7 @@ Regular Backups
 Multiple Region Redundancy
 Backed by Townsend Security's FIPS 140-2 compliant key manager, your keys are secured to industry standards. 
 
-= Lockr is the first key management service for WordPress.=
+= Lockr is the first key management service for WordPress. =
 More and more plugins are leveraging 3rd party APIs. To securely access these APIs, a token, secret key, or password is necessary. Until now, these highly sensitive keys were stored right in your database. We’ve seen a major need to secure sensitive data and communications by removing these API keys from your database, encrypting them, and storing safely in an offsite key vault. This limits the damage that could be done if your site is compromised or a developer has a local copy of your database. Lockr makes key management easy. Just install the plugin for WordPress, configure your account and begin securely storing your keys. Lockr provides patches for the major plugins used by hundreds of thousands of sites and with WP-CLI a single command will make sure your plugins use Lockr.
 
 = Who is Lockr for? =
