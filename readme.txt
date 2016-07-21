@@ -71,6 +71,10 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 == Changelog ==
 
+= 2.0.1 =
+*Mailchimp For WordPress Support!
+With over 600,000 active installs, Mailchimp is the first plugin Lockr supports out of the box. Upon installing Lockr (or this update), it will automatically secure the API key in Mailchimp for WordPress plugin. No extra work necessary! Stay tuned for more supported plugins!
+
 = 2.0 =
 * Hello WordPress! Lockr is happy to be a part of the community and officially in the plugin directory. 
 * To celebrate our release we have provided a function to encrypt/decrypt data based on a key stored in Lockr. Simply use lockr_encrypt() and lockr_decrypt() to secure your data. More features around encryption are planned for future releases
