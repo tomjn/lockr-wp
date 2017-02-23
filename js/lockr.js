@@ -4,7 +4,7 @@ jQuery( function ( $ ) {
 		var keyLabel = $( this ).val();
 		keyLabel = keyLabel.toLowerCase().replace( /\W+/g,'_' );
 		
-		if( !$( '.machine-name' ).hasClass('disabled') ){
+		if ( !$( '.machine-name' ).hasClass('disabled') ){
 			$( '.machine-name input' ).val( keyLabel );
 			$( '.machine-name-label a' ).text( keyLabel );
 		}
@@ -17,5 +17,13 @@ jQuery( function ( $ ) {
 	$( '.show-key-name' ).click( function() {
 		$( '.machine-name' ).removeClass( 'hidden' );
 		return false;
+	});
+	$( '#create_key' ).click( function() {
+		if ( !$('#key_value').attr('disabled') ) {
+			$('#key_value').attr('disabled', 'disabled');
+		}
+		else {
+			$('#key_value').removeAttr('disabled', 'disabled');
+		}
 	});
 });

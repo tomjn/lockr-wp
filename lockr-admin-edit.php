@@ -32,7 +32,9 @@ function lockr_admin_submit_edit_key() {
 
 
 function lockr_edit_form() {
-	list( $exists, $available ) = lockr_check_registration();
+	$status = lockr_check_registration();
+	$exists = $status['exists'];
+	$available = $status['available'];
 	$js_url = LOCKR__PLUGIN_URL . '/js/lockr.js';
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'lockr_keys';

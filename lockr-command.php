@@ -1,7 +1,7 @@
 <?php
 	
-use Lockr\Exception\ClientException;
-use Lockr\Exception\ServerException;
+use Lockr\Exception\LockrClientException;
+use Lockr\Exception\LockrServerException;
 
 /**
  * Allow for key retrieval from WP-CLI.
@@ -24,11 +24,12 @@ function lockr_command_get_key( $args, $assoc_args ) {
 	}
 }
 
+
+WP_CLI::add_command( 'lockr get key', 'lockr_command_get_key' );
+
 /**
  * Register a site from WP-CLI.
  */
-WP_CLI::add_command( 'lockr get key', 'lockr_command_get_key' );
-
 function lockr_command_register_site( $args, $assoc_args ) {
 	list( $exists, $available ) = lockr_check_registration();
 	
@@ -47,19 +48,19 @@ function lockr_command_register_site( $args, $assoc_args ) {
 	}
 	try {
 		lockr_site_client()->register( $assoc_args['email'], NULL, $name );
-	} catch ( ClientException $e ) {
+	} catch ( LockrClientException $e ) {
 		if ( !$assoc_args['password'] ) {
 			WP_CLI::error( 'Lockr account already exists for this email, please provide a password to authenticate and register site.' );
 		} else {
 			try {
 				lockr_site_client()->register( $assoc_args['email'], $assoc_args['password'], $name );
-			} catch ( ClientException $e ) {
+			} catch ( LockrClientException $e ) {
 				WP_CLI::error( 'Login credentials incorrect, please try again.' );
-			} catch ( ServerException $e ) {
+			} catch ( LockrServerException $e ) {
 				WP_CLI::error( 'An unknown error has occurred, please try again later.' );
 			}
 		}
-	} catch ( ServerException $e ) {
+	} catch ( LockrServerException $e ) {
 		WP_CLI::error( 'An unknown error has occurred, please try again later.' );
 	}
 

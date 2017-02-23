@@ -6,7 +6,7 @@
 Plugin Name: Lockr
 Plugin URI: https://lockr.io/
 Description: Integrate with the Lockr hosted key management platform. Secure all your API and encryption keys according to industry best practices. With Lockr, key management is easy.
-Version: 2.0.1
+Version: 2.1
 Author: Lockr
 Author URI: htts://lockr.io/
 License: GPLv2 or later
@@ -34,12 +34,12 @@ register_activation_hook( __FILE__, 'lockr_install' );
  * Hook implementations and callbacks for lockr.
  */
 
+use Lockr\Exception\LockrClientException;
 use Lockr\KeyClient;
 use Lockr\Lockr;
+use Lockr\NullPartner;
 use Lockr\Partner;
 use Lockr\SiteClient;
-use Lockr\Exception\ClientException;
-use Lockr\Exception\ServerException;
 
 /**
  * Include our autoloader.
@@ -47,7 +47,7 @@ use Lockr\Exception\ServerException;
 require_once( LOCKR__PLUGIN_DIR . '/lockr-autoload.php' );
 
 /**
- * Include our admin forms.
+ * Include our admin functions.
  */
 if ( is_admin() ) {
 	require_once( LOCKR__PLUGIN_DIR . '/lockr-admin.php' );
@@ -95,7 +95,7 @@ function lockr_install() {
 
 	$partner = lockr_get_partner();
 
-	if ($partner) {
+	if ( $partner ) {
 		add_option( 'lockr_partner', $partner['name'] );
 		add_option( 'lockr_cert', $partner['cert'] );
 	}
@@ -105,11 +105,16 @@ function lockr_install() {
  * Returns the detected partner, if available.
  */
 function lockr_get_partner() {
-	if ( defined('PANTHEON_BINDING') ) {
+	if ( defined( 'PANTHEON_BINDING' ) ) {
+		$desc = <<<EOL
+The Pantheor is strong with this one.
+We're detecting you're on Pantheon and a friend of theirs is a friend of ours.
+Welcome to Lockr.
+EOL;
 		return array(
 			'name' => 'pantheon',
-			'title' => __( 'Pantheon' ),
-			'description' => __( 'Our system has detected that your website is hosted on one of our supported providers, no additional configuration is necessary.' ),
+			'title' => 'Pantheon',
+			'description' => $desc,
 			'cert' => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
 		);
   	}
@@ -151,27 +156,40 @@ function lockr_key_client() {
  * Returns the Lockr client for this site.
  */
 function lockr_client() {
-	$partner = get_option( 'lockr_partner' );
-	$cert = get_option( 'lockr_cert' );
+	static $client;
 
-	if ( ! $partner || ! $cert ) {
-		return false;
+	if ( ! isset( $client ) ) {
+		$client = Lockr::create( lockr_partner() );
 	}
-
-	if ($partner !== 'custom') {
-		$partner_info = lockr_get_partner();
-
-		if ( ! $partner_info ) {
-			return false;
-		}
-
-		$partner = $partner_info['name'];
-		$cert = $partner_info['cert'];
-	}
-
-	$client = Lockr::create( new Partner( $cert, $partner ) );
 
 	return $client;
+}
+
+/**
+ * Returns the current partner for this site.
+ */
+function lockr_partner() {
+	$region = get_option( 'lockr_region', 'us' );
+
+	if ( get_option( 'lockr_cert', false ) ) {
+		$cert_path = get_option( 'lockr_cert' );
+		if ( $cert_path ) {
+			return new Partner( $cert_path, 'custom', $region );
+		}
+
+		return new NullPartner( $region );
+	}
+
+	$detected_partner = lockr_get_partner();
+	if ( ! $detected_partner ) {
+		return new NullPartner( $region );
+	}
+
+	return new Partner(
+		$detected_partner['cert'],
+		$detected_partner['name'],
+		$region
+	);
 }
 
 /**
@@ -181,18 +199,24 @@ function lockr_client() {
  * true if this site is registered, false if not.
  */
 function lockr_check_registration() {
+	$status = array(
+		'cert_valid' => false,
+		'exists' => false,
+		'available' => false,
+		'has_cc' => false,
+		'info' => array( 'partner' => null ),
+	);
+
 	$client = lockr_site_client();
+
 	try {
 		if ( $client ) {
-			return $client->exists();
-		} else {
-			return false;
+			$status = $client->exists();
 		}
-	} catch ( ServerException $e ) {
-		return false;
-	} catch ( ClientException $e ) {
-		return false;
+	} catch ( LockrClientException $e ) {
 	}
+
+	return $status;
 }
 
 /**
@@ -204,7 +228,7 @@ function lockr_check_registration() {
  * @return string|null
  *   The encrypted and encoded ciphertext or null if encryption fails.
  */
-function lockr_encrypt( $key_name, $plaintext ) {
+function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key') {
 	$cipher = MCRYPT_RIJNDAEL_256;
 	$mode = MCRYPT_MODE_CBC;
 
@@ -212,6 +236,8 @@ function lockr_encrypt( $key_name, $plaintext ) {
 	if ( ! $key ) {
 		return null;
 	}
+	
+	$key = base64_decode($key);
 
 	$iv_len = mcrypt_get_iv_size( $cipher, $mode );
 	$iv = mcrypt_create_iv( $iv_len );
@@ -276,6 +302,7 @@ function lockr_decrypt( $encoded ) {
 	if ( ! $key ) {
 		return null;
 	}
+	$key = base64_decode($key);
 
 	if ( ! isset( $parts['iv'] ) ) {
 		return null;
@@ -321,16 +348,15 @@ function lockr_get_key( $key_name ) {
 	}
 
 	$encoded = $key_store[0]->key_value;
-
 	$client = lockr_key_client();
 
 	try {
-		if( $client ) {
-		return $client->encrypted( $encoded )->get( $key_name );
+		if ( $client ) {
+			return $client->encrypted( $encoded )->get( $key_name );
 		} else {
 			return false;
 		}
-	} catch (\Exception $e) {
+	} catch ( \Exception $e ) {
 		return false;
 	}
 }
@@ -353,7 +379,7 @@ function lockr_get_key( $key_name ) {
 function lockr_set_key( $key_name, $key_value, $key_label ) {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'lockr_keys';
-	$key_abstract = '**************' . substr($key_value, -4);
+	$key_abstract = '**************' . substr( $key_value, -4 );
 	$query = $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = '%s'", array( $key_name ) );
 	$key_exists = $wpdb->get_results( $query );
 	if ( empty( $key_exists ) ) {
@@ -372,14 +398,12 @@ function lockr_set_key( $key_name, $key_value, $key_label ) {
 
 	try {
 		$key_remote = $client->set( $key_name, $key_value, $key_label, $encoded );
-	} catch ( ClientException $e ) {
-		$body = $e->getMessage();
-		$data = json_decode($body, true);
-		if ( isset( $data['title']) && $data['title'] === 'Not paid' ) {
+	} catch ( LockrClientException $e ) {
+		if ($e->title === 'Not Paid') {
 			return 'NOTE: Key was not set. Please go to <a href="https://lockr.io/">Lockr</a> and add a payment method to your account.';
 		}
 	}
-	catch (\Exception $e) {
+	catch ( \Exception $e ) {
 		return false;
 	}
 
@@ -394,16 +418,16 @@ function lockr_set_key( $key_name, $key_value, $key_label ) {
 		);
 
 		if ( ! empty( $key_exists ) ) {
-			$key_id = array('id' => $key_exists[0]->id);
+			$key_id = array( 'id' => $key_exists[0]->id );
 			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
 		} else {
 			$key_store = $wpdb->insert( $table_name, $key_data );
 		}
 
 		return $key_store;
-	} else {
-		return false;
 	}
+
+	return false;
 }
 
 /**
@@ -421,12 +445,12 @@ function lockr_delete_key( $key_name ) {
 	if ( ! empty( $key_delete ) ) {
 		$client = lockr_key_client();
 		if ( $client ) {
-			$client->delete($key_name);
+			$client->delete( $key_name );
 			return true;
 		}
-	} else {
-		return false;
 	}
+
+	return false;
 }
 
 /**

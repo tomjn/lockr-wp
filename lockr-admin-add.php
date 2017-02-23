@@ -17,7 +17,14 @@ function lockr_admin_submit_add_key() {
 	//Just incase our javascript didn't clean it up
 	$key_name = strtolower( $_POST['key_name'] );
 	$key_name = preg_replace( '@[^a-z0-9_]+@','_', $key_name );
-	$key_value = $_POST['key_value'];
+	
+	if ( $_POST['create_key'] == 'on') {
+		//Create a default encryption key
+		$client = lockr_key_client();
+		$key_value = base64_encode($client->create(256));
+	} else {
+		$key_value = $_POST['key_value'];
+	}
 	
 	$key_store = lockr_set_key( $key_name, $key_value, $key_label );
 	
@@ -33,7 +40,9 @@ function lockr_admin_submit_add_key() {
 }
 
 function lockr_add_form() {
-	list( $exists, $available ) = lockr_check_registration();
+	$status = lockr_check_registration();
+	$exists = $status['exists'];
+	$available = $status['available'];
 	$js_url = LOCKR__PLUGIN_URL . '/js/lockr.js';
 	?>
 <script type="text/javascript" src="<?php print $js_url; ?>"></script>
@@ -61,7 +70,9 @@ function lockr_add_form() {
 				</div>
 				<div class="form-item">
 					<label for="key_value">Key Value:</label>
-					<input type="text" name="key_value" placeholder="Your Key Value"/>
+					<input type="text" name="key_value" placeholder="Your Key Value" id="key_value"/>
+					<input type="checkbox" name="create_key" id="create_key"/>
+					<label for="create_key">Create a secure encryption key for me</label>
 				</div>
 				<br />
 				<input type="submit" value="Add Key" class="button-primary"/>

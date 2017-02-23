@@ -1,17 +1,7 @@
 <?php
-
-namespace Lockr;
-
-// Don't call the file directly and give up info!
-if ( !function_exists( 'add_action' ) ) {
-	echo 'Lock it up!';
-	exit;
-}
-
 // ex: ts=4 sts=4 sw=4 et:
 
-use Lockr\Exception\ClientException;
-use Lockr\Exception\ServerException;
+namespace Lockr;
 
 /**
  * API for site management operations.
@@ -34,12 +24,41 @@ class SiteClient
     }
 
     /**
+     * Creates a new certificate.
+     *
+     * @param array $dn The distinguished name to create the CSR.
+     *
+     * @return string[] The private key and signed certificate.
+     */
+    public function createCert(array $dn)
+    {
+        $key = openssl_pkey_new(array('private_key_bits' => 2048));
+        if ($key === false) {
+            throw new \RuntimeException('Could not create private key.');
+        }
+        if (!openssl_pkey_export($key, $key_text)) {
+            throw new \RuntimeException('Could not export private key.');
+        }
+
+        $csr = openssl_csr_new($dn, $key);
+        if (!openssl_csr_export($csr, $csr_text)) {
+            throw new \RuntimeException('Could not export CSR.');
+        }
+
+        $body = $this->client->post('/v1/create-cert', [
+            'csr_text' => $csr_text,
+        ]);
+
+        return [
+            'key_text' => $key_text,
+            'cert_text' => $body['cert_text'],
+        ];
+    }
+
+    /**
      * Checks if the current site/env is registered and/or available.
      *
-     * @return bool[] Returns a two-value array of booleans:
-     *
-     * - True if the site is registered with Lockr.
-     * - True if the current env is available.
+     * @return bool[]
      *
      * @throws ServerException
      * if the server is unavailable or returns an error.
@@ -47,21 +66,20 @@ class SiteClient
      */
     public function exists()
     {
-        list($status, $body) = $this->client->get('/v1/site/exists');
+        $body = $this->client->get('/v1/site/exists');
 
-        $body = json_decode($body, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || $status >= 500) {
-            throw new ServerException();
-        }
-        if ($status >= 400) {
-            throw new ClientException();
-        }
-
-        return array(
-            isset($body['exists']) ? (bool) $body['exists'] : false,
-            isset($body['available']) ? (bool) $body['available'] : false,
+        $defaults = array(
+            'cert_valid' => false,
+            'exists' => false,
+            'available' => false,
+            'has_cc' => false,
         );
+
+        if (is_array($body)) {
+            return $body + $defaults;
+        }
+
+        return $defaults;
     }
 
     /**
@@ -87,17 +105,6 @@ class SiteClient
             $auth = null;
         }
 
-        list($status, $_) = $this->client->post(
-            '/v1/site/register',
-            $data,
-            $auth
-        );
-
-        if ($status >= 500) {
-            throw new ServerException();
-        }
-        if ($status >= 400) {
-            throw new ClientException();
-        }
+        $this->client->post('/v1/site/register', $data, $auth);
     }
 }

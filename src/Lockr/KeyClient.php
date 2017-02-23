@@ -1,17 +1,9 @@
 <?php
+// ex: ts=4 sts=4 sw=4 et:
 
 namespace Lockr;
 
-// Don't call the file directly and give up info!
-if ( !function_exists( 'add_action' ) ) {
-	echo 'Lock it up!';
-	exit;
-}
-
-// ex: ts=4 sts=4 sw=4 et:
-
-use Lockr\Exception\ClientException;
-use Lockr\Exception\ServerException;
+use Lockr\KeyWrapper\MultiKeyWrapper;
 
 class KeyClient
 {
@@ -57,21 +49,25 @@ class KeyClient
      */
     public function get($name)
     {
-        list($status, $body) = $this->client->get($this->uri($name));
-
-        $body = json_decode($body, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE || $status >= 500) {
-            throw new ServerException();
-        }
-        if ($status >= 400) {
-            throw new ClientException();
-        }
+        $body = $this->client->get($this->uri($name));
 
         if (null !== $this->encoded) {
-            return $this->decrypt($body['key_value'], $this->encoded);
+            return MultiKeyWrapper::decrypt($body['key_value'], $this->encoded);
         }
         return $body['key_value'];
+    }
+
+    /**
+     * Creates a key in Lockr.
+     *
+     * @param int $key_size The size of key to create.
+     *
+     * @return string Returns the created key value.
+     */
+    public function create($key_size)
+    {
+        $body = $this->client->get("/v1/generate-key?key_size={$key_size}");
+        return base64_decode($body['key_value']);
     }
 
     /**
@@ -87,26 +83,20 @@ class KeyClient
     {
         if ($this->encoded) {
             if ($encoded === NULL) {
-                list($value, $encoded) = $this->encrypt($value);
+                $ret = MultiKeyWrapper::encrypt($value);
             } else {
-                list($value, $encoded) = $this->reencrypt($value, $encoded);
+                $ret = MultiKeyWrapper::reencrypt($value, $encoded);
             }
+            $value = $ret['ciphertext'];
         }
         $data = array(
             'key_value' => $value,
             'key_label' => $label,
         );
-        list($status, $body) = $this->client->patch($this->uri($name), $data);
-
-        if ($status >= 500) {
-            throw new ServerException($body);
-        }
-        if ($status >= 400) {
-            throw new ClientException($body);
-        }
+        $this->client->patch($this->uri($name), $data);
 
         if ($this->encoded) {
-            return $encoded;
+            return $ret['encoded'];
         }
         return true;
     }
@@ -124,60 +114,5 @@ class KeyClient
     protected function uri($name)
     {
         return '/v1/key/'.urlencode($name);
-    }
-
-    protected function reencrypt($plaintext, $encoded)
-    {
-        list($cipher, $mode, $iv, $key) = $this->decode($encoded);
-        $ciphertext = mcrypt_encrypt($cipher, $key, $plaintext, $mode, $iv);
-				$ciphertext = base64_encode($ciphertext);
-        $encoded = $this->encode($cipher, $mode, $iv, $key);
-        return array($ciphertext, $encoded);
-    }
-
-    protected function encrypt($plaintext)
-    {
-        $cipher = MCRYPT_RIJNDAEL_256;
-        $mode = MCRYPT_MODE_CBC;
-        
-        $key = openssl_random_pseudo_bytes(32);
-        $iv_len = mcrypt_get_iv_size($cipher, $mode);
-        $iv = mcrypt_create_iv($iv_len);
-
-        $ciphertext = mcrypt_encrypt($cipher, $key, $plaintext, $mode, $iv);
-        $ciphertext = base64_encode($ciphertext);
-        $encoded = $this->encode($cipher, $mode, $iv, $key);
-
-        return array($ciphertext, $encoded);
-    }
-
-    protected function decrypt($ciphertext, $encoded)
-    {
-        list($cipher, $mode, $iv, $key) = $this->decode($encoded);
-        $ciphertext = base64_decode($ciphertext);
-
-        $key = mcrypt_decrypt($cipher, $key, $ciphertext, $mode, $iv);
-
-        return trim($key);
-    }
-
-    protected function encode($cipher, $mode, $iv, $key)
-    {
-        $parts = array(
-            $cipher,
-            $mode,
-            base64_encode($iv),
-            base64_encode($key),
-        );
-
-        return implode('$', $parts);
-    }
-
-    protected function decode($encoded)
-    {
-        list($cipher, $mode, $iv, $key) = explode('$', $encoded, 4);
-        $iv = base64_decode($iv);
-        $key = base64_decode($key);
-        return array($cipher, $mode, $iv, $key);
     }
 }

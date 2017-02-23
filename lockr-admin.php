@@ -11,9 +11,6 @@ if ( ! function_exists( 'add_action' ) ) {
 	exit;
 }
 
-use Lockr\Exception\ClientException;
-use Lockr\Exception\ServerException;
-
 //Include our admin forms
 require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-config.php' );
 require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-add.php' );
@@ -30,7 +27,12 @@ function lockr_admin_menu() {
 	add_submenu_page( 'lockr', __( 'Lockr Key Storage', 'lockr' ), __( 'All Keys', 'lockr' ), 'manage_options', 'lockr' );
 	add_submenu_page( 'lockr', __( 'Create Lockr Key', 'lockr' ), __( 'Add Key', 'lockr' ), 'manage_options', 'lockr-add-key', 'lockr_add_form' );
 	add_submenu_page( null, __( 'Edit Lockr Key', 'lockr' ), __( 'Edit Key', 'lockr' ), 'manage_options', 'lockr-edit-key', 'lockr_edit_form' );
-	add_submenu_page( 'lockr', __( 'Lockr Configuration', 'lockr' ), __( 'Lockr Configuration', 'lockr' ), 'manage_options', 'lockr-site-config', 'lockr_configuration_form' );
+	$page = add_submenu_page( 'lockr', __( 'Lockr Configuration', 'lockr' ), __( 'Lockr Configuration', 'lockr' ), 'manage_options', 'lockr-site-config', 'lockr_configuration_form' );
+	add_action( "admin_print_styles-{$page}", 'lockr_admin_styles' );
+}
+
+function lockr_admin_styles() {
+  wp_enqueue_style( 'lockrStylesheet' );
 }
 
 //Admin Table for Lockr Key Management
@@ -123,7 +125,7 @@ class Key_List extends WP_List_Table {
 		$totalitems = $wpdb->query( $query );
 
 		// First, lets decide how many records per page to show
-		$perpage = 5;
+		$perpage = 20;
 
 		// Which page is this?
 		$paged = ! empty( $_GET['paged'] ) ? esc_sql( $_GET['paged'] ) : '';
@@ -191,6 +193,9 @@ class Key_List extends WP_List_Table {
 			$names = esc_sql( $_POST['keys'] );
 			foreach ( $names as $name ) {
 				self::delete_key( $name );
+				if( $name == 'lockr_default_key') {
+					update_option( 'lockr_default_deleted', true );
+				}
 				echo "<div id='message' class='updated fade'><p><strong>You successfully deleted the $name key from Lockr.</strong></p></div>";
 			}
 		}
@@ -198,7 +203,21 @@ class Key_List extends WP_List_Table {
 }
 
 function lockr_keys_table() {
-	list( $exists, $available ) = lockr_check_registration();
+	$status = lockr_check_registration();
+	$exists = $status['exists'];
+	$available = $status['available'];
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'lockr_keys';
+	$query = "SELECT * FROM $table_name WHERE key_name = 'lockr_default_key'";
+	$default_key = $wpdb->query( $query );
+	$deleted_default = get_option( 'lockr_default_deleted' );
+	if( $exists && !$default_key && !$deleted_default ){
+		//Create a default encryption key
+		$client = lockr_key_client();
+		$key_value = base64_encode($client->create(256));
+		lockr_set_key( 'lockr_default_key', $key_value, 'Lockr Default Encryption Key' );
+	}
 	$keyTable = new Key_List();
 	$keyTable->prepare_items();
 	?>

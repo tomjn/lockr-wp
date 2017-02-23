@@ -1,14 +1,11 @@
 <?php
+// ex: ts=4 sts=4 sw=4 et:
 
 namespace Lockr;
 
-// Don't call the file directly and give up info!
-if ( !function_exists( 'add_action' ) ) {
-	echo 'Lock it up!';
-	exit;
-}
-
-// ex: ts=4 sts=4 sw=4 et:
+use Lockr\Exception\LockrException;
+use Lockr\Exception\LockrClientException;
+use Lockr\Exception\LockrServerException;
 
 /**
  * Primary interface for Lockr API calls.
@@ -92,7 +89,8 @@ class Lockr
 
     public function post($uri, $data, $auth = null)
     {
-        $uri = $this->partner->getWriteUri().$uri;
+        // horrible hack needed until Lockr v2
+        $uri = $this->partner->getAccountingUri().$uri;
         $options = $this->partner->requestOptions();
         $options['data'] = $data;
         if (null !== $auth) {
@@ -154,7 +152,52 @@ class Lockr
 
         $resp = curl_exec($ch);
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $body = json_decode($resp, true);
+        $json_error = json_last_error();
 
-        return array($code, $resp);
+        if ($code >= 400) {
+            if ($json_error !== JSON_ERROR_NONE) {
+                $body = array(
+                    'title' => 'Unrecognized body',
+                    'description' => $resp,
+                );
+            }
+            $this->handleError($code, $body);
+        }
+
+        if (!$resp) {
+            return true;
+        }
+
+        if ($json_error !== JSON_ERROR_NONE) {
+            throw new LockrException(array(
+                'message' => $resp,
+                'code' => $code,
+            ));
+        }
+
+        return $body;
+    }
+
+    /**
+     * Parses an error response and throws the correct exception.
+     */
+    public function handleError($code, $body)
+    {
+        $title = isset($body['title']) ? $body['title'] : '';
+        $description = isset($body['description']) ? $body['description'] : '';
+
+        $params = array(
+            'title' => $title,
+            'description' => $description,
+            'message' => "[{$title}]: {$description}",
+            'code' => $code,
+        );
+
+        if ($code >= 500) {
+            throw new LockrServerException($params);
+        }
+
+        throw new LockrClientException($params);
     }
 }

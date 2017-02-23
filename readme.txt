@@ -1,8 +1,8 @@
 === Plugin Name ===
 Contributors: cteitzel
-Tags: encrypt, encryption, security, API, key, password,
+Tags: encrypt, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
-Tested up to: 4.5.3
+Tested up to: 4.7.2
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -13,12 +13,13 @@ Lockr is the first API & Encryption key management service for WordPress, provid
 
 = API & ENCRYPTION KEY MANAGEMENT FOR WORDPRESS =
 
-Lockr is the first hosted API & Encryption key management solution for WordPress, providing an affordable solution for all sites to properly manage API and encryption keys used by their plugins. Lockr's offsite key management solution protects against critical vulnerabilities, delivers best-practice security to help sites comply with many industry regulations, and provides a Defense in Depth approach to securing your data. And best of all, even though it delivers enterprise-grade key management, your first key and 1500 key requests are free! Learn more at http://www.lockr.io.
+Lockr is the first hosted API & Encryption key management solution for WordPress, providing an affordable solution for all sites to properly manage API and encryption keys used by their plugins. Lockr's offsite key management solution protects against critical vulnerabilities, delivers best-practice security to help sites comply with many industry regulations, and provides a Defense in Depth approach to securing your data. Lockr also provides AES-256 encryption to your custom plugins in a seamless manner to protect data at rest in your site. And best of all, even though it delivers enterprise-grade key management, your first key and 1500 key requests are free! Learn more at http://www.lockr.io.
 
 = Lockr Features: =
 Easy to configure and setup in WordPress
 Safe and Secure offsite key storage
 Works with any API and encryption key
+Built-in AES-256 Encryption functions to secure data in your site
 99.9% uptime guarantee (SLA Available for Enterprise Customers)
 Regular Backups
 Multiple Region Redundancy
@@ -30,7 +31,7 @@ More and more plugins are leveraging 3rd party APIs. To securely access these AP
 = Who is Lockr for? =
 Lockr is available for WordPress sites of all sizes. Easy to use for the novice site owner and advanced enough for the expert developer, Lockr secures web transactions and data at rest by protecting API and encryption keys.
 For Site Builders: fill out a single registration form and you’re set. To use with other plugins, look for those that have Lockr available or use our patch library to update your favorite plugin to use Lockr.
-For Developers: Lockr provides an easy to use framework to “get and set” keys from your custom plugin. Additionally, Lockr provides a simple to use encryption function, ensuring your data is encrypted according to industry best-practices and securely stored. Using Lockr helps keep the developer safe, by removing the sensitive passwords and key secrets from the central code base, following security best practices, protecting you as the developer if a site were to be compromised. 
+For Developers: Lockr provides an easy to use framework to “get and set” keys from your custom plugin. Additionally, Lockr provides a simple to use yet strong AES-256 encryption function, ensuring your data is encrypted according to industry best-practices and securely stored. Using Lockr helps keep the developer safe, by removing the sensitive passwords and key secrets from the code and database, following security best practices should a site be compromised. 
 
 = Is Lockr Safe? =
 Lockr can secure any API key, secret key, and other types of credentials. Once enabled in WordPress, keys entered are encrypted, then sent over to the Lockr system and removed from the code repository and database. This encryption teamed with hosting provider based authentication prevents your key from being used outside your website. Lockr also manages keys on a “per environment" basis which helps eliminate the potential of keys being shared from production to development environments. No longer will you have to worry about sending a notification from development to your production users, or having production data decrypted in development environments.
@@ -46,21 +47,24 @@ Installation of Lockr is simple, and if you are on a supported hosting partner, 
 1. Upload the Lockr directory to the `/wp-content/plugins/plugin-name` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate Lockr through the 'Plugins' screen in your WordPress 
 3. Visit Settings > Lockr
-4a. Existing User: enter the email address you’ve used in the past
-4b. New User: enter your email address and we’ll take care of the rest
+4. If you are on a partnering hosting provider you can skip the automation and go directly to registering your site. If you are not, follow the steps in the forms presented to automate the issuance of a certificate to connect to Lockr.
+5a. Existing Lockr User: Enter the email address you’ve used in the past along with your password and you're set.
+5b. New Lockr User: Enter the email you would like to register the site under and we'll do the rest.
+6. Once the dashboard shows you as having a certificate and registration you're done!
+7. When ready to deploy to production, follow the prompts provided which will remove the development certificate and place a production one in its place. With production you're in our guaranteed uptime environment.
 
-You're set! Start entering your keys through the Lockr config!
+You're set! Start entering your keys through the Lockr config or by using our integrations with other plugins!
 
 
 == Frequently Asked Questions ==
 
 = How is my key stored? =
 
-Before transmitting your key to Lockr, it is encrypted and then sent via a secure connection to the Lockr server where it is held in a FIPS 140-2 compliant key manager. By encrypting it before it leaves the site, Lockr has no way of knowing or accessing your key. Only your site can unlock the key for it to be used.
+Before transmitting your key to Lockr, it is encrypted and verified with a HMAC. It is then sent via a secure connection to the Lockr server where it is held in a FIPS 140-2 compliant key manager. By encrypting it before it leaves the site, Lockr has no way of knowing or accessing your key, and with the HMAC you can be sure no one has possibly interfered with the key in transit. Only your site can unlock the key for it to be used.
 
 = Will this slow down my site? =
 
-Not to any noticeable effect. The connection to the Lockr server depends on the speed of your servers connection but on average we see round trips of under 100ms. This is about the same time that some database queries take.
+Not to any noticeable effect. The connection to the Lockr server depends on the speed of your servers connection but on average we see round trips of under 200ms. This is about the same time that some database queries take.
 
 = What is the uptime guarantee of Lockr = 
 
@@ -71,8 +75,16 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 == Changelog ==
 
+= 2.1 =
+* Any site anywhere - Lockr now automates all of the setup and authentication, no matter where your site is located. Simply fill out the form when you first activate the plugin and we will create secure authentication credentials for you and place them into a secure folder on your server. Now setup for Lockr can be done in just a few clicks!
+* Easy Encryption - When Lockr first starts up, it will create for you a highly secure 256-bit encryption key. With this, lockr_encrypt() and lockr_decrypt() work out of the box without any additional setup.
+* HMAC signed keys - Not only are keys encrypted before being sent to Lockr, they now are signed with an HMAC so the integrity of the key is ensured during transit and storage. TL/DR - We made your keys even safer when they're stored in Lockr.
+* Status dashboard - Now with a quick glance you can see the status of all the major components of the Lockr setup and registration process. Green means go and red means take a deeper look.
+* EU Support - Out of beta, this release also allows for keys to be stored in our isolated and dedicated EU environment.
+* Support for GiveWP - Last but not least, we now support all major plugins for GiveWP! With this your donations are secured even more with the api keys for all the additional services (from payment gateways to email marketing) are now automatically stored in Lockr. Simply go to the settings page and save the settings form again. Afterwards, you'll see the keys show up in your key list and Give will keep working as expected.
+
 = 2.0.1 =
-*Mailchimp For WordPress Support!
+* Mailchimp For WordPress Support!
 With over 600,000 active installs, Mailchimp is the first plugin Lockr supports out of the box. Upon installing Lockr (or this update), it will automatically secure the API key in Mailchimp for WordPress plugin. No extra work necessary! Stay tuned for more supported plugins!
 
 = 2.0 =
