@@ -454,11 +454,6 @@ function lockr_configuration_form() {
   <h1>Lockr Registration</h1>
 <?php
 	settings_errors();
-?>
-  <form method="post" action="options.php">
-<?php
-	settings_fields( 'lockr_options' );
-
 	$cert_valid = $status['cert_valid'];
 	$exists = $status['exists'];
 
@@ -495,6 +490,10 @@ or connect with us on <a href="http://slack.lockr.io">Slack</a>.
 	$status_table->prepare_items();
 	$status_table->display();
 	$partner = lockr_get_partner();
+?>
+  <form method="post" action="options.php">
+<?php
+	settings_fields( 'lockr_options' );
 
 	if ( $partner ) {
 ?>
