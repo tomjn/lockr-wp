@@ -7,15 +7,15 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 function lockr_admin_submit_edit_key() {
-	if ( !current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'You are not allowed to edit a key.' );
 	}
 
 	check_admin_referer( 'lockr_admin_verify' );
-	
-	$key_label = $_POST['key_label'];
-	$key_name = $_POST['key_name'];
-	$key_value = $_POST['key_value'];
+
+	$key_label = sanitize_text_field( $_POST['key_label'] );
+	$key_name = sanitize_key( $_POST['key_name'] );
+	$key_value = sanitize_text_field( $_POST['key_value'] );
 
 	$key_store = lockr_set_key( $key_name, $key_value, $key_label );
 
@@ -77,6 +77,6 @@ function lockr_edit_form() {
 				<input type="submit" value="Save Key" class="button-primary"/>
 			</form>
 	<?php endif; ?>
-	
+
 </div>
 <?php }

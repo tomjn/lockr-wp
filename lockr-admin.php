@@ -4,21 +4,26 @@
  * @file
  * Form callbacks for Lockr register form.
  */
- 
+
 // Don't call the file directly and give up info!
 if ( ! function_exists( 'add_action' ) ) {
 	echo 'Lock it up!';
 	exit;
 }
 
+use Lockr\Exception\LockrClientException;
+use Lockr\Exception\LockrServerException;
+
 //Include our admin forms
 require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-config.php' );
 require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-add.php' );
 require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-edit.php' );
+require_once( LOCKR__PLUGIN_DIR . '/lockr-admin-override.php' );
 
 add_action( 'admin_menu', 'lockr_admin_menu');
 add_action( 'admin_init', 'register_lockr_settings' );
 add_action( 'admin_post_lockr_admin_submit_add_key', 'lockr_admin_submit_add_key' );
+add_action( 'admin_post_lockr_admin_submit_override_key', 'lockr_admin_submit_override_key' );
 add_action( 'admin_post_lockr_admin_submit_edit_key', 'lockr_admin_submit_edit_key' );
 
 function lockr_admin_menu() {
@@ -26,6 +31,7 @@ function lockr_admin_menu() {
 	add_menu_page( __( 'Lockr Key Storage', 'lockr' ), __( 'Lockr', 'lockr' ), 'manage_options', 'lockr', 'lockr_keys_table', $icon_svg  );
 	add_submenu_page( 'lockr', __( 'Lockr Key Storage', 'lockr' ), __( 'All Keys', 'lockr' ), 'manage_options', 'lockr' );
 	add_submenu_page( 'lockr', __( 'Create Lockr Key', 'lockr' ), __( 'Add Key', 'lockr' ), 'manage_options', 'lockr-add-key', 'lockr_add_form' );
+	add_submenu_page( 'lockr', __( 'Override Option', 'lockr' ), __( 'Override Option', 'lockr' ), 'manage_options', 'lockr-override-option', 'lockr_override_form' );
 	add_submenu_page( null, __( 'Edit Lockr Key', 'lockr' ), __( 'Edit Key', 'lockr' ), 'manage_options', 'lockr-edit-key', 'lockr_edit_form' );
 	$page = add_submenu_page( 'lockr', __( 'Lockr Configuration', 'lockr' ), __( 'Lockr Configuration', 'lockr' ), 'manage_options', 'lockr-site-config', 'lockr_configuration_form' );
 	add_action( "admin_print_styles-{$page}", 'lockr_admin_styles' );
@@ -35,22 +41,22 @@ function lockr_admin_styles() {
   wp_enqueue_style( 'lockrStylesheet' );
 }
 
-//Admin Table for Lockr Key Management
-if ( ! class_exists('WP_List_Table') ) {
+// Admin Table for Lockr Key Management
+if ( ! class_exists( 'WP_List_Table' ) ) {
 	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 
 if ( ! get_option( 'lockr_partner' ) ) {
   $partner = lockr_get_partner();
 
-  if ($partner) {
+  if ( $partner ) {
     add_option( 'lockr_partner', $partner['name'] );
     add_option( 'lockr_cert', $partner['cert'] );
   }
 }
 
 class Key_List extends WP_List_Table {
-	
+
 	public function __construct() {
 		parent::__construct(array(
 			'singular' => __( 'Key', 'lockr' ),
@@ -58,12 +64,12 @@ class Key_List extends WP_List_Table {
 			'ajax' => false
 		));
 	}
-	
+
 	// Text displayed when no key data is available
 	public function no_items() {
 		_e( 'No keys stored yet.', 'sp' );
 	}
-	
+
 	function column_cb( $item ) {
 		return sprintf(
 			'<input type="checkbox" name="%1$s" value="%2$s" />',
@@ -71,7 +77,7 @@ class Key_List extends WP_List_Table {
 			$item->key_name
 		);
 	}
-	
+
 	function get_columns() {
 		return $columns = array(
 			'cb' => '<input type="checkbox" />',
@@ -81,7 +87,7 @@ class Key_List extends WP_List_Table {
 			'edit' => '',
 		);
 	}
-	
+
 	public function get_sortable_columns() {
 		$sortable_columns = array(
 			'key_label' => array( 'key_label', true ),
@@ -105,7 +111,7 @@ class Key_List extends WP_List_Table {
 				return "<a href='$url' >edit</a>";
 		}
 	}
-  
+
 	function prepare_items() {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'lockr_keys';
@@ -155,7 +161,7 @@ class Key_List extends WP_List_Table {
 		$this->_column_headers = array( $columns, $hidden, $sortable );
 		$this->items = $wpdb->get_results( $query );
 	}
-  
+
 	/**
 	 * Delete a Lockr key.
 	 *
@@ -164,7 +170,7 @@ class Key_List extends WP_List_Table {
 	public static function delete_key( $key_name ) {
 		lockr_delete_key( $key_name );
 	}
-	
+
 	/**
 	 * Returns an associative array containing the bulk action
 	 *
@@ -177,7 +183,7 @@ class Key_List extends WP_List_Table {
 
 		return $actions;
 	}
-	
+
 	public function process_bulk_action() {
 		if ( isset( $_POST['_wpnonce'] ) && ! empty( $_POST['_wpnonce'] ) ) {
 			$nonce  = filter_input( INPUT_POST, '_wpnonce', FILTER_SANITIZE_STRING );
@@ -199,7 +205,7 @@ class Key_List extends WP_List_Table {
 				echo "<div id='message' class='updated fade'><p><strong>You successfully deleted the $name key from Lockr.</strong></p></div>";
 			}
 		}
-	}  
+	}
 }
 
 function lockr_keys_table() {

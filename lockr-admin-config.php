@@ -273,6 +273,9 @@ re-input all keys stored in Lockr.</strong>
 
 function lockr_options_validate( $input ) {
 	$options = get_option( 'lockr_options' );
+	if (!is_array($options)) {
+		$options = array();
+	}
 
 	if ( ! isset( $input['lockr_op'] ) ) {
 		return $options;

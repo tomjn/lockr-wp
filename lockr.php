@@ -5,8 +5,8 @@
 /*
 Plugin Name: Lockr
 Plugin URI: https://lockr.io/
-Description: Integrate with the Lockr hosted key management platform. Secure all your API and encryption keys according to industry best practices. With Lockr, key management is easy.
-Version: 2.1
+Description: Integrate with the Lockr hosted secrets management platform. Secure all your plugin passwords, API tokens and encryption keys according to industry best practices. With Lockr, secrets management is easy.
+Version: 2.2
 Author: Lockr
 Author URI: htts://lockr.io/
 License: GPLv2 or later
@@ -34,6 +34,7 @@ register_activation_hook( __FILE__, 'lockr_install' );
  * Hook implementations and callbacks for lockr.
  */
 
+use Lockr\Exception\LockrException;
 use Lockr\Exception\LockrClientException;
 use Lockr\KeyClient;
 use Lockr\Lockr;
@@ -69,29 +70,33 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
  * Set our db version which will be updated should the schema change.
  */
 global $lockr_db_version;
-$lockr_db_version = '1.0';
+$lockr_db_version = '1.1';
 
 function lockr_install() {
 	global $wpdb;
 	global $lockr_db_version;
+	$current_lockr_db_version = get_option( 'lockr_db_version' );
 
-	$table_name = $wpdb->prefix . 'lockr_keys';
-	$charset_collate = $wpdb->get_charset_collate();
+	if ( $current_lockr_db_version != $lockr_db_version ) {
+		$table_name = $wpdb->prefix . 'lockr_keys';
+		$charset_collate = $wpdb->get_charset_collate();
 
-	$sql = "CREATE TABLE $table_name (
-		id mediumint(9) NOT null AUTO_INCREMENT,
-		time datetime DEFAULT '0000-00-00 00:00:00' NOT null,
-		key_name tinytext NOT null,
-		key_value text NOT null,
-		key_label text NOT null,
-		key_abstract text,
-		UNIQUE KEY id (id)
-	) $charset_collate;";
+		$sql = "CREATE TABLE $table_name (
+			id mediumint(9) NOT null AUTO_INCREMENT,
+			time datetime DEFAULT '0000-00-00 00:00:00' NOT null,
+			key_name tinytext NOT null,
+			key_value text NOT null,
+			key_label text NOT null,
+			key_abstract text,
+			option_override text,
+			UNIQUE KEY id (id)
+		) $charset_collate;";
 
-	require_once ( ABSPATH . 'wp-admin/includes/upgrade.php' );
-	dbDelta( $sql );
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		dbDelta( $sql );
 
-	add_option( 'lockr_db_version', $lockr_db_version );
+		add_option( 'lockr_db_version', $lockr_db_version );
+	}
 
 	$partner = lockr_get_partner();
 
@@ -100,6 +105,14 @@ function lockr_install() {
 		add_option( 'lockr_cert', $partner['cert'] );
 	}
 }
+
+function lockr_update_db_check() {
+	global $lockr_db_version;
+	if ( get_option( 'lockr_db_version' ) != $lockr_db_version ) {
+		lockr_install();
+	}
+}
+add_action( 'plugins_loaded', 'lockr_update_db_check' );
 
 /**
  * Returns the detected partner, if available.
@@ -376,7 +389,7 @@ function lockr_get_key( $key_name ) {
  * @return bool
  * true if they key set successfully, false if not.
  */
-function lockr_set_key( $key_name, $key_value, $key_label ) {
+function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null ) {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'lockr_keys';
 	$key_abstract = '**************' . substr( $key_value, -4 );
@@ -415,6 +428,7 @@ function lockr_set_key( $key_name, $key_value, $key_label ) {
 			'key_label' => $key_label,
 			'key_value' => $key_remote,
 			'key_abstract' => $key_abstract,
+			'option_override' => $option_override,
 		);
 
 		if ( ! empty( $key_exists ) ) {
@@ -437,20 +451,45 @@ function lockr_set_key( $key_name, $key_value, $key_label ) {
  * The key name
  */
 function lockr_delete_key( $key_name ) {
-	global $wpdb;
-	$table_name = $wpdb->prefix . 'lockr_keys';
+	$key_value = lockr_get_key( $key_name );
 
-	$key_store = array( 'key_name' => $key_name );
-	$key_delete = $wpdb->delete( $table_name, $key_store );
-	if ( ! empty( $key_delete ) ) {
-		$client = lockr_key_client();
-		if ( $client ) {
+	$client = lockr_key_client();
+	if ( $client ) {
+		global $wpdb;
+		global $lockr_all_keys;
+		$table_name = $wpdb->prefix . 'lockr_keys';
+		try {
 			$client->delete( $key_name );
+		} catch ( LockrException $e ) {
+			return false;
+		}
+		if ( isset( $lockr_all_keys[ $key_name ] ) ) {
+			$key = $lockr_all_keys[ $key_name ];
+			// Set the value back into the option value
+			$new_option_array = explode( ':', $key->option_override );
+			$option_name = array_shift( $new_option_array );
+			$existing_option = get_option( $option_name );
+			if ( $existing_option ) {
+				unset( $lockr_all_keys[ $key_name ] );
+				if ( is_array( $existing_option ) ) {
+					$serialized_data_ref = &$existing_option;
+					foreach ( $new_option_array as $option_key ) {
+						$serialized_data_ref = &$serialized_data_ref[ $option_key ];
+					}
+					$serialized_data_ref = $key_value;
+					update_option( $option_name, $existing_option );
+				} else {
+					update_option( $option_name, $key_value );
+				}
+			}
+		}
+
+		$key_store = array( 'key_name' => $key_name );
+		$key_delete = $wpdb->delete( $table_name, $key_store );
+		if ( ! empty( $key_delete ) ) {
 			return true;
 		}
 	}
-
-	return false;
 }
 
 /**

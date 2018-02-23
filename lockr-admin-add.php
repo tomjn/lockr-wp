@@ -7,23 +7,23 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 
 function lockr_admin_submit_add_key() {
-	if ( !current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( 'You are not allowed to add a key.' );
 	}
 	
 	check_admin_referer( 'lockr_admin_verify' );
 	
-	$key_label = $_POST['key_label'];
+	$key_label = sanitize_text_field( $_POST['key_label'] );
 	//Just incase our javascript didn't clean it up
 	$key_name = strtolower( $_POST['key_name'] );
-	$key_name = preg_replace( '@[^a-z0-9_]+@','_', $key_name );
+	$key_name = preg_replace( '@[^a-z0-9_]+@', '_', $key_name );
 	
 	if ( $_POST['create_key'] == 'on') {
-		//Create a default encryption key
+		// Create a default encryption key
 		$client = lockr_key_client();
-		$key_value = base64_encode($client->create(256));
+		$key_value = base64_encode( $client->create( 256 ) );
 	} else {
-		$key_value = $_POST['key_value'];
+		$key_value = sanitize_text_field( $_POST['key_value'] );
 	}
 	
 	$key_store = lockr_set_key( $key_name, $key_value, $key_label );
