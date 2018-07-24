@@ -369,27 +369,27 @@ function lockr_options_validate( $input ) {
 			if ( $cert_path[0] !== '/' ) {
 				$cert_path = ABSPATH . $cert_path;
 			}
-				
+
 			if ( ! is_readable($cert_path) ) {
 				add_settings_error(
 					'lockr_options',
 					'lockr-cert-path',
 					"{$cert_path} must be a readable file."
 				);
-	
+
 				return $options;
 			}
-		
+
 			update_option( 'lockr_partner', 'custom' );
 			update_option( 'lockr_cert', $cert_path );
 		} else {
 			$partner = lockr_get_partner();
 			if ( $partner ) {
 				update_option( 'lockr_partner', $partner['name'] );
-				update_option( 'lockr_cert', $partner['cert'] );
+				delete_option( 'lockr_cert' );
 			} else {
 				update_option( 'lockr_partner', '' );
-				update_option( 'lockr_cert', '' );
+				delete_option('lockr_cert');
 			}
 		}
 
@@ -401,9 +401,9 @@ function lockr_options_validate( $input ) {
 		} else{
 			$options['account_password'] = '';
 		}
-	
+
 		$name = get_bloginfo( 'name', 'display' );
-	
+
 		if ( ! filter_var( $options['account_email'], FILTER_VALIDATE_EMAIL ) ) {
 			add_settings_error( 'lockr_options', 'lockr-email', $options['account_email'] . ' is not a proper email address. Please try again.', 'error' );
 			$options['account_email'] = '';
@@ -432,7 +432,7 @@ function lockr_options_validate( $input ) {
 			}
 		}
 		$options['account_password'] = '';
-		return $options;	
+		return $options;
 	}
 }
 

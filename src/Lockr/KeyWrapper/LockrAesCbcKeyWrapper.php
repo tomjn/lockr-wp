@@ -73,7 +73,7 @@ class LockrAesCbcKeyWrapper implements KeyWrapperInterface
         );
     }
 
-    protected function encode($cipher, $mode, $iv, $key)
+    protected static function encode($cipher, $mode, $iv, $key)
     {
         $parts = array(
             $cipher,
@@ -85,7 +85,7 @@ class LockrAesCbcKeyWrapper implements KeyWrapperInterface
         return implode('$', $parts);
     }
 
-    protected function decode($encoded)
+    protected static function decode($encoded)
     {
         $parts = explode('$', $encoded, 4);
         if (!$parts || count($parts) != 4) {

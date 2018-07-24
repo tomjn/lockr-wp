@@ -51,7 +51,6 @@ if ( ! get_option( 'lockr_partner' ) ) {
 
   if ( $partner ) {
     add_option( 'lockr_partner', $partner['name'] );
-    add_option( 'lockr_cert', $partner['cert'] );
   }
 }
 

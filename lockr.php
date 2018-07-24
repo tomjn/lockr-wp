@@ -6,7 +6,7 @@
 Plugin Name: Lockr
 Plugin URI: https://lockr.io/
 Description: Integrate with the Lockr hosted secrets management platform. Secure all your plugin passwords, API tokens and encryption keys according to industry best practices. With Lockr, secrets management is easy.
-Version: 2.2
+Version: 2.3
 Author: Lockr
 Author URI: htts://lockr.io/
 License: GPLv2 or later
@@ -102,7 +102,6 @@ function lockr_install() {
 
 	if ( $partner ) {
 		add_option( 'lockr_partner', $partner['name'] );
-		add_option( 'lockr_cert', $partner['cert'] );
 	}
 }
 
@@ -185,12 +184,17 @@ function lockr_partner() {
 	$region = get_option( 'lockr_region', 'us' );
 
 	if ( get_option( 'lockr_cert', false ) ) {
-		$cert_path = get_option( 'lockr_cert' );
-		if ( $cert_path ) {
-			return new Partner( $cert_path, 'custom', $region );
-		}
 
-		return new NullPartner( $region );
+		$partner = get_option( 'lockr_partner', null );
+
+		if( $partner == 'custom'){
+			$cert_path = get_option('lockr_cert');
+			if ($cert_path) {
+				return new Partner($cert_path, 'custom', $region);
+			}
+
+			return new NullPartner($region);
+		}
 	}
 
 	$detected_partner = lockr_get_partner();
@@ -249,7 +253,7 @@ function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key') {
 	if ( ! $key ) {
 		return null;
 	}
-	
+
 	$key = base64_decode($key);
 
 	$iv_len = mcrypt_get_iv_size( $cipher, $mode );
