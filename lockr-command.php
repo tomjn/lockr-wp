@@ -1,26 +1,34 @@
 <?php
-	
+/**
+ * WPCLI Integration for Lockr.
+ *
+ * @package Lockr
+ */
+
 use Lockr\Exception\LockrClientException;
 use Lockr\Exception\LockrServerException;
 
 /**
  * Allow for key retrieval from WP-CLI.
+ *
+ * @param array $args an array of arguments passed into the command.
+ * @param array $assoc_args an array of associated arguments passed into the command.
  */
 function lockr_command_get_key( $args, $assoc_args ) {
-	//Get our key name from one of 2 ways
+	// Get our key name from one of 2 ways.
 	$key_name = $args[0];
-	if( ! $key_name ) {
+	if ( ! $key_name ) {
 		$key_name = $assoc_args['key'];
 	}
-	if( ! $key_name ){
+	if ( ! $key_name ) {
 		WP_CLI::error( 'No key name provided' );
 	}
-	
+
 	$key = lockr_get_key( $key_name );
 	if ( $key ) {
-	  WP_CLI::success( $key );
+		WP_CLI::success( $key );
 	} else {
-	  WP_CLI::error( 'No Key Found' );
+		WP_CLI::error( 'No Key Found' );
 	}
 }
 
@@ -29,27 +37,30 @@ WP_CLI::add_command( 'lockr get key', 'lockr_command_get_key' );
 
 /**
  * Register a site from WP-CLI.
+ *
+ * @param array $args an array of arguments passed into the command.
+ * @param array $assoc_args an array of associated arguments passed into the command.
  */
 function lockr_command_register_site( $args, $assoc_args ) {
 	list( $exists, $available ) = lockr_check_registration();
-	
+
 	if ( $exists ) {
 		WP_CLI::error( 'This site is already registered with Lockr.' );
 	}
-	
+
 	$name = get_bloginfo( 'name', 'display' );
 
 	if ( ! $assoc_args['email'] ) {
 		WP_CLI::error( 'No Email Provided' );
 	}
-	
+
 	if ( ! filter_var( $assoc_args['email'], FILTER_VALIDATE_EMAIL ) ) {
 		WP_CLI::error( $assoc_args['email'] . ' is not a valid email address' );
 	}
 	try {
-		lockr_site_client()->register( $assoc_args['email'], NULL, $name );
+		lockr_site_client()->register( $assoc_args['email'], null, $name );
 	} catch ( LockrClientException $e ) {
-		if ( !$assoc_args['password'] ) {
+		if ( ! $assoc_args['password'] ) {
 			WP_CLI::error( 'Lockr account already exists for this email, please provide a password to authenticate and register site.' );
 		} else {
 			try {
@@ -77,6 +88,9 @@ WP_CLI::add_command( 'lockr register site', 'lockr_command_register_site' );
 
 /**
  * Set a key from WP CLI.
+ *
+ * @param array $args an array of arguments passed into the command.
+ * @param array $assoc_args an array of associated arguments passed into the command.
  */
 function lockr_command_set_key( $args, $assoc_args ) {
 	if ( ! $assoc_args['name'] ) {
@@ -88,21 +102,21 @@ function lockr_command_set_key( $args, $assoc_args ) {
 	if ( ! $assoc_args['label'] ) {
 		WP_CLI::error( 'No key label provided, please provide one with --label=[key label]. This is the display name for the key.' );
 	}
-	
-	$key_name = $assoc_args['name'];
+
+	$key_name  = $assoc_args['name'];
 	$key_value = $assoc_args['value'];
 	$key_label = $assoc_args['label'];
-	
+
 	// Double check our key name is properly formatted.
 	$key_name = strtolower( $key_name );
-	$key_name = preg_replace( '@[^a-z0-9_]+@','_', $key_name );
-	
+	$key_name = preg_replace( '@[^a-z0-9_]+@', '_', $key_name );
+
 	$key = lockr_set_key( $key_name, $key_value, $key_label );
 
 	if ( $key ) {
 		WP_CLI::success( $key_label . ' added to Lockr.' );
 	} else {
-		WP_CLI::error( $key_label . ' was not added to Lockr. Please try again.');
+		WP_CLI::error( $key_label . ' was not added to Lockr. Please try again.' );
 	}
 }
 
@@ -110,6 +124,9 @@ WP_CLI::add_command( 'lockr set key', 'lockr_command_set_key' );
 
 /**
  * Apply patches to plugins for Lockr.
+ *
+ * @param array $args an array of arguments passed into the command.
+ * @param array $assoc_args an array of associated arguments passed into the command.
  */
 function lockr_command_lockdown( $args, $assoc_args ) {
 	$raw_path = 'https://raw.githubusercontent.com/CellarDoorMedia/Lockr-Patches/wp';
@@ -127,21 +144,21 @@ function lockr_command_lockdown( $args, $assoc_args ) {
 	WP_CLI::log( "Patches available for: {$names}." );
 
 	$plugin_dir = WP_PLUGIN_DIR;
-	$plugins = get_plugins();
+	$plugins    = get_plugins();
 
 	foreach ( $registry as $name => $patches ) {
-		if ( ! isset( $plugins[$name] ) ) {
+		if ( ! isset( $plugins[ $name ] ) ) {
 			WP_CLI::log( "Plugin not found: {$name}." );
 			continue;
 		}
 
-		$plugin_version = $plugins[$name]['Version'];
+		$plugin_version = $plugins[ $name ]['Version'];
 		if ( ! in_array( $plugin_version, array_keys( $patches ) ) ) {
 			WP_CLI::log( "Plugin version not supported: {$name} ({$plugin_version})." );
 			continue;
 		}
 
-		$path = $patches[$plugin_version];
+		$path = $patches[ $plugin_version ];
 
 		$plugin_path = dirname( "{$plugin_dir}/{$name}" );
 
@@ -157,11 +174,11 @@ function lockr_command_lockdown( $args, $assoc_args ) {
 		if ( is_file( $lockfile ) ) {
 			WP_CLI::log( "{$name} already patched." );
 			WP_CLI::log( "Remove {$lockfile} to patch again." );
-			WP_CLI::log( "Do so at your own peril." );
+			WP_CLI::log( 'Do so at your own peril.' );
 			continue;
 		}
 
-		$patch_path = "{$plugin_path}/key-integration.patch";
+		$patch_path   = "{$plugin_path}/key-integration.patch";
 		$patch_remote = "{$raw_path}/{$path}";
 		WP_CLI::log( "Downloading {$patch_remote}." );
 		copy( $patch_remote, $patch_path );
@@ -174,18 +191,20 @@ function lockr_command_lockdown( $args, $assoc_args ) {
 			'--no-backup-if-mismatch',
 			'-N',
 			'-p1',
-			'-d', escapeshellarg( $plugin_path ),
-			'<', escapeshellarg( $patch_path ),
+			'-d',
+			escapeshellarg( $plugin_path ),
+			'<',
+			escapeshellarg( $patch_path ),
 		) );
 		WP_CLI::log( "Running `{$cmd}`." );
 		ob_start();
 		passthru( $cmd, $return_code );
 		WP_CLI::log( ob_get_clean() );
 
-		if ( $return_code === 0 ) {
+		if ( 0 === $return_code ) {
 			// Patch is OK, go ahead and write the lockfile and remove the
 			// downloaded patch.
-			WP_CLI::log( "Patch successful, writing lockfile." );
+			WP_CLI::log( 'Patch successful, writing lockfile.' );
 			file_put_contents( $lockfile, '' );
 			unlink( $patch_path );
 		} else {
