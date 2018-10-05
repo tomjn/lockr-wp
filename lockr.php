@@ -53,11 +53,9 @@ use Lockr\SiteClient;
 require_once LOCKR__PLUGIN_DIR . '/lockr-autoload.php';
 
 /**
- * Include our admin functions.
+ * Include our partners.
  */
-if ( is_admin() ) {
-	require_once LOCKR__PLUGIN_DIR . '/lockr-admin.php';
-}
+require_once LOCKR__PLUGIN_DIR . '/lockr-partners.php';
 
 /**
  * Include our overrides.
@@ -68,11 +66,19 @@ require_once LOCKR__PLUGIN_DIR . '/lockr-overrides.php';
  * Include our post encryption filters.
  */
 require_once LOCKR__PLUGIN_DIR . '/lockr-secure-posts.php';
+
 /**
  * Include our WP CLI Commands if available.
  */
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once dirname( __FILE__ ) . '/lockr-command.php';
+}
+
+/**
+ * Include our admin functions.
+ */
+if ( is_admin() ) {
+	require_once LOCKR__PLUGIN_DIR . '/lockr-admin.php';
 }
 
 /**
@@ -114,70 +120,9 @@ function lockr_install() {
 
 	if ( $partner ) {
 		add_option( 'lockr_partner', $partner['name'] );
-
-		lockr_auto_register( $partner );
-	}
-}
-
-/**
- * Setup the necessary auto registration certs.
- *
- * @param array  $partner The Partner array.
- * @param string $env The Envrionment to register.
- */
-function lockr_auto_register( $partner = array(), $env = null ) {
-
-	if ( empty( $partner['title'] ) ) {
-		return;
 	}
 
-	if ( 'Kinsta' === $partner['title'] ) {
-		// Setup our Kinsta dev and prod certs.
-		$dn = array(
-			'countryName' => 'US',
-			'stateOrProvinceName' => 'California',
-			'localityName' => 'Los Angeles',
-			'organizationName' => 'Kinsta',
-		);
-		if ( null === $env && ! file_exists( ABSPATH . '.lockr/dev/pair.pem' ) ) {
-			$kinsta_null   = new NullPartner( 'us' );
-			$kinsta_client = Lockr::create( $kinsta_null );
-			$dev_client    = new SiteClient( $kinsta_client );
-
-			try {
-				$result = $dev_client->createCert( $dn );
-			} catch ( LockrClientException $e ) {
-				error_log( 'Lockr encountered an unexpected error. Please try to setup the certificates manually.' );
-			} catch ( LockrServerException $e ) {
-				error_log( 'Lockr encountered an unexpected server error. Please try to setup the certificates manually.' );
-			}
-
-			if ( ! empty( $result['cert_text'] ) ) {
-				$dir = ABSPATH . '.lockr/dev';
-				lockr_write_cert_pair( $dir, $result );
-			}
-		}
-		if ( 'dev' === $env && ! file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
-			$kinsta_dev    = new Partner( ABSPATH . '.lockr/dev/pair.pem', 'custom', 'us' );
-			$kinsta_client = Lockr::create( $kinsta_dev );
-			$prod_client   = new SiteClient( $kinsta_client );
-
-			try {
-				$result = $prod_client->createCert( $dn );
-			} catch ( LockrClientException $e ) {
-				error_log( 'Lockr encountered an unexpected error. Please try to setup the certificates manually.' );
-				return $options;
-			} catch ( LockrServerException $e ) {
-				error_log( 'Lockr encountered an unexpected server error. Please try to setup the certificates manually.' );
-				return $options;
-			}
-
-			if ( ! empty( $result['cert_text'] ) ) {
-				$dir = ABSPATH . '.lockr/prod';
-				lockr_write_cert_pair( $dir, $result );
-			}
-		}
-	}
+	lockr_auto_register( $partner );
 }
 
 /**
@@ -223,45 +168,6 @@ function lockr_update_db_check() {
 	}
 }
 add_action( 'plugins_loaded', 'lockr_update_db_check' );
-
-/**
- * Returns the detected partner, if available.
- */
-function lockr_get_partner() {
-	if ( defined( 'PANTHEON_BINDING' ) ) {
-		$desc = <<<EOL
-The Pantheor is strong with this one.
-We're detecting you're on Pantheon and a friend of theirs is a friend of ours.
-Welcome to Lockr.
-EOL;
-		return array(
-			'name'        => 'pantheon',
-			'title'       => 'Pantheon',
-			'description' => $desc,
-			'cert'        => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
-		);
-	}
-
-	if ( array_key_exists( 'KINSTA_CACHE_ZONE', $_SERVER ) ) {
-		$desc = <<<EOL
-We're detecting you're on Kinsta and a friend of theirs is a friend of ours.
-Welcome to Lockr. We have already setup your connection automatically.
-EOL;
-		if ( ! file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
-			$cert = ABSPATH . '.lockr/dev/pair.pem';
-		} else {
-			$cert = ABSPATH . '.lockr/prod/pair.pem';
-		}
-		return array(
-			'name'        => 'custom',
-			'title'       => 'Kinsta',
-			'description' => $desc,
-			'cert'        => $cert,
-		);
-	}
-
-	return null;
-}
 
 /**
  * Returns the Lockr site client.
