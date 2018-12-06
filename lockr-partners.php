@@ -219,7 +219,7 @@ function lockr_auto_register( $partner = array(), $env = null ) {
 	}
 
 	// Sanitize the $env for use below.
-	if ( 'dev' !== $env || 'prod' !== $env || null !== $env ) {
+	if ( 'dev' !== $env && 'prod' !== $env && null !== $env ) {
 		$env = null;
 	}
 
