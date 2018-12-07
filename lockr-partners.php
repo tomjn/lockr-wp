@@ -260,6 +260,8 @@ function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $en
 
 		if ( ! empty( $result['cert_text'] ) ) {
 			lockr_write_cert_pair( $dirname . '/dev', $result );
+			update_option( 'lockr_partner', 'custom' );
+			update_option( 'lockr_cert', $dirname . "/dev/pair.pem" );
 		}
 	}
 

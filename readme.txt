@@ -2,7 +2,7 @@
 Contributors: cteitzel, tynor
 Tags: encrypt, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
-Tested up to: 4.9
+Tested up to: 5.0
 Requires PHP: 5.5
 Stable tag: trunk
 License: GPLv2 or later
@@ -77,11 +77,31 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 == Changelog ==
 
+= 2.4 =
+**Big update!**
+
+With this update we've added automatic registration! This means that when you enable the plugin it will automatically set you up with the certificates for a development account. We didn't stop there, we've setup a few of the largest WordPress hosts with a customized experience for you if you're on one of the hosts.
+
+The hosts we now support with automatic registration are:
+
+* Pantheon
+* Kinsta
+* GoDaddy
+* WP Engine
+* Flywheel
+* Siteground
+
+But wait... there's more! We've added 2 ways to keep your data in WordPress even more secure.
+
+With our roots in encryption we wanted to make sure WordPress users every opportunity to stay secure. We've also added the ability to encrypt posts. Simply check the box in the Lockr configuration and any post you password protect will also be encrypted in the database. Now you can keep those private posts encrypted and not able to be read from the database. With this reliance on password protection, we also wanted to make the password handling as secure as possible as well. So we added the ability to hash passwords stored in the database, keeping your passwords as secure as they can be.
+
+Of course we wouldn't launch this without full Gutenberg compatibility! All the encryption works great, no matter what editor you use!
+
 = 2.3 =
 With our new pricing, and free trial period, we've added a row to the status table to show when the trial period ends. We've also fixed a bug that caused some intermittent issues on Pantheon.
 
 = 2.2 =
-*Any Secret Anywhere! - This is BIG. No more custom integrations, no more custom code necessary to use Lockr with the plugins already in your site. Lockr now seamlessly integrates with any plugin on your site like WooCommerce, Give, Mailchimp, Stripe etc. to keep your keys and passwords secure in Lockr’s FIPS 140-2 compliant key managers. Using Lockr’s new options override UI, you can now simply select any secret from any plugin that utilizes the option table (almost everyone does), even if that secret is buried in a serialized array. Within a few clicks you're on your way and your secrets are removed the options table, encrypted and stored in Lockr. With a completely seamless integration, keys remain available for settings forms but that secret (key, password, etc) is no longer in your database. Feel free to update the settings via the forms and our update hooks will ensure Lockr keeps up to date on the latest values. Decide you want to delete the plugin? Upon deleting the option from the options table, Lockr will also delete it so you're only storing the keys you need. As always, if you want a strong encryption key to override the one your plugin was storing in the database, just check the box on the form and we'll create a new, random 256-bit key to keep your data secure.
+* Any Secret Anywhere! - This is BIG. No more custom integrations, no more custom code necessary to use Lockr with the plugins already in your site. Lockr now seamlessly integrates with any plugin on your site like WooCommerce, Give, Mailchimp, Stripe etc. to keep your keys and passwords secure in Lockr’s FIPS 140-2 compliant key managers. Using Lockr’s new options override UI, you can now simply select any secret from any plugin that utilizes the option table (almost everyone does), even if that secret is buried in a serialized array. Within a few clicks you're on your way and your secrets are removed the options table, encrypted and stored in Lockr. With a completely seamless integration, keys remain available for settings forms but that secret (key, password, etc) is no longer in your database. Feel free to update the settings via the forms and our update hooks will ensure Lockr keeps up to date on the latest values. Decide you want to delete the plugin? Upon deleting the option from the options table, Lockr will also delete it so you're only storing the keys you need. As always, if you want a strong encryption key to override the one your plugin was storing in the database, just check the box on the form and we'll create a new, random 256-bit key to keep your data secure.
 
 = 2.1 =
 * Any site anywhere - Lockr now automates all of the setup and authentication, no matter where your site is located. Simply fill out the form when you first activate the plugin and we will create secure authentication credentials for you and place them into a secure folder on your server. Now setup for Lockr can be done in just a few clicks!

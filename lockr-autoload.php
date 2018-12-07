@@ -17,9 +17,6 @@ if ( ! function_exists( 'add_action' ) ) {
  * @param string $class The class to load.
  */
 function lockr_autoload( $class ) {
-	if ( substr( $class, 0, 6 ) !== 'Lockr\\' ) {
-		return false;
-	}
 	$file = __DIR__ . '/src/' . str_replace( '\\', '/', $class ) . '.php';
 	if ( file_exists( $file ) ) {
 		include_once $file;
