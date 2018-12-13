@@ -192,6 +192,37 @@ EOL;
 		);
 	}
 
+	if ( false !== strpos( gethostname(), 'bluehost' ) ) {
+		$desc = <<<EOL
+We're detecting you're on Bluehost and a friend of theirs is a friend of ours.
+Welcome to Lockr! We have already setup your connection automatically.
+EOL;
+
+		$dirname = ABSPATH . '.lockr';
+
+		$dn = array(
+			'countryName'         => 'US',
+			'stateOrProvinceName' => 'Utah',
+			'localityName'        => 'Provo',
+			'organizationName'    => 'Bluehost',
+		);
+
+		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+			$cert = $dirname . '/dev/pair.pem';
+		} else {
+			$cert = $dirname . '/prod/pair.pem';
+		}
+		return array(
+			'name'        => 'custom',
+			'title'       => 'Bluehost',
+			'description' => $desc,
+			'cert'        => $cert,
+			'dn'          => $dn,
+			'dirname'     => $dirname,
+			'force_prod'  => true,
+		);
+	}
+
 	return null;
 }
 
