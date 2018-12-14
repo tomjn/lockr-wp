@@ -17,26 +17,30 @@ use Lockr\SiteClient;
  * Returns the detected partner, if available.
  */
 function lockr_get_partner() {
+
 	if ( defined( 'PANTHEON_BINDING' ) ) {
 		$desc = <<<EOL
-The Pantheor is strong with this one.
-We're detecting you're on Pantheon and a friend of theirs is a friend of ours.
-Welcome to Lockr!
+			The Pantheor is strong with this one.
+			We're detecting you're on Pantheon and a friend of theirs is a friend of ours.
+			Welcome to Lockr!
 EOL;
+
 		return array(
-			'name'        => 'pantheon',
-			'title'       => 'Pantheon',
-			'description' => $desc,
-			'cert'        => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
+			'name'          => 'pantheon',
+			'title'         => 'Pantheon',
+			'description'   => $desc,
+			'cert'          => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
+			'partner_certs' => true,
 		);
 	}
 
 	if ( array_key_exists( 'KINSTA_CACHE_ZONE', $_SERVER ) ) {
 		$desc = <<<EOL
-We're detecting you're on Kinsta and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on Kinsta and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
+		$staging = false;
 		$dirname = ABSPATH . '.lockr';
 
 		$dn = array(
@@ -46,28 +50,30 @@ EOL;
 			'organizationName'    => 'Kinsta',
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'Kinsta',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'Kinsta',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
 		);
 	}
 
 	if ( defined( 'FLYWHEEL_CONFIG_DIR' ) ) {
 		$desc = <<<EOL
-We're detecting you're on Flywheel and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on Flywheel and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
+		$staging = false;
 		$dirname = '/www/.lockr';
 
 		$dn = array(
@@ -77,28 +83,30 @@ EOL;
 			'organizationName'    => 'Flywheel',
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'Flywheel',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'Flywheel',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
 		);
 	}
 
 	if ( isset( $_SERVER['IS_WPE'] ) && '1' === $_SERVER['IS_WPE'] ) {
 		$desc = <<<EOL
-We're detecting you're on WP Engine and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on WP Engine and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
+		$staging = false;
 		$dirname = ABSPATH . '.lockr';
 
 		if ( isset( $_SERVER['WPENGINE_ACCOUNT'] ) ) {
@@ -114,28 +122,30 @@ EOL;
 			'organizationName'    => 'WP Engine' . $account_name,
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'WPEngine',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'WPEngine',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
 		);
 	}
 
 	if ( defined( 'GD_VIP' ) ) {
 		$desc = <<<EOL
-We're detecting you're on GoDaddy and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on GoDaddy and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
+		$staging = false;
 		$dirname = ABSPATH . '.lockr';
 
 		$dn = array(
@@ -145,28 +155,30 @@ EOL;
 			'organizationName'    => 'GoDaddy',
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'GoDaddy',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'GoDaddy',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
 		);
 	}
 
 	if ( isset( $_SERVER['SERVER_ADMIN'] ) && false !== strpos( 'siteground', sanitize_text_field( wp_unslash( $_SERVER['SERVER_ADMIN'] ) ) ) ) {
 		$desc = <<<EOL
-We're detecting you're on Siteground and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on Siteground and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
+		$staging = false;
 		$dirname = ABSPATH . '.lockr';
 
 		$dn = array(
@@ -176,29 +188,36 @@ EOL;
 			'organizationName'    => 'Siteground',
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'Siteground',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'Siteground',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
 		);
 	}
 
 	if ( false !== strpos( gethostname(), 'bluehost' ) ) {
 		$desc = <<<EOL
-We're detecting you're on Bluehost and a friend of theirs is a friend of ours.
-Welcome to Lockr! We have already setup your connection automatically.
+			We're detecting you're on Bluehost and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
 
-		$dirname = ABSPATH . '.lockr';
+		$staging = get_option( 'staging_environment' );
+
+		if ( 'staging' === $staging ) {
+			$dirname = ABSPATH . '../../.lockr';
+		} else {
+			$dirname = ABSPATH . '.lockr';
+		}
 
 		$dn = array(
 			'countryName'         => 'US',
@@ -207,19 +226,20 @@ EOL;
 			'organizationName'    => 'Bluehost',
 		);
 
-		if ( ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( 'staging' === $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
 		return array(
-			'name'        => 'custom',
-			'title'       => 'Bluehost',
-			'description' => $desc,
-			'cert'        => $cert,
-			'dn'          => $dn,
-			'dirname'     => $dirname,
-			'force_prod'  => true,
+			'name'          => 'custom',
+			'title'         => 'Bluehost',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => true,
 		);
 	}
 
@@ -255,9 +275,10 @@ function lockr_auto_register( $partner = array(), $env = null ) {
 	}
 
 	if ( isset( $partner['dn'] ) && isset( $partner['dirname'] ) ) {
-		$dn         = $partner['dn'];
-		$dirname    = $partner['dirname'];
-		$force_prod = $partner['force_prod'];
+		$dn            = $partner['dn'];
+		$dirname       = $partner['dirname'];
+		$force_prod    = $partner['force_prod'];
+		$partner_certs = $partner['partner_certs'];
 	}
 
 	// Now that we have the information, let's create the certs.
@@ -272,7 +293,7 @@ function lockr_auto_register( $partner = array(), $env = null ) {
  * @param string  $env The Environment we are creating certificates for.
  * @param boolean $force_prod Force creating the production cert.
  */
-function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $env = null, $force_prod = false ) {
+function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $env = null, $force_prod = false, $partner_certs = false ) {
 
 	if ( null === $env ) {
 		$partner_null   = new NullPartner( 'us' );
@@ -292,11 +313,10 @@ function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $en
 		if ( ! empty( $result['cert_text'] ) ) {
 			lockr_write_cert_pair( $dirname . '/dev', $result );
 			update_option( 'lockr_partner', 'custom' );
-			update_option( 'lockr_cert', $dirname . "/dev/pair.pem" );
 		}
 	}
 
-	if ( 'dev' === $env && ! file_exists( $dirname . '/prod/pair.pem' ) && $force_prod ) {
+	if ( 'dev' === $env && ! file_exists( $dirname . '/prod/pair.pem' ) && $force_prod && ! $partner_certs ) {
 		$partner_dev    = new Partner( $dirname . '/dev/pair.pem', 'custom', 'us' );
 		$partner_client = Lockr::create( $partner_dev );
 		$prod_client    = new SiteClient( $partner_client );

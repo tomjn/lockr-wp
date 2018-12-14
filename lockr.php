@@ -238,7 +238,19 @@ function lockr_partner() {
 
 	$detected_partner = lockr_get_partner();
 	if ( ! $detected_partner ) {
-		return new NullPartner( $region );
+		// User is not on any detected partner or custom certificate location.
+		$dirname = ABSPATH . '.lockr';
+		if ( file_exists( $dirname . '/prod/pair.pem' ) ) {
+			$cert_path = $dirname . '/prod/pair.pem';
+		} elseif ( file_exists( $dirname . '/dev/pair.pem' ) ) {
+			$cert_path = $dirname . '/dev/pair.pem';
+		}
+
+		if ( $cert_path ) {
+			return new Partner( $cert_path, 'custom', $region );
+		} else {
+			return new NullPartner( $region );
+		}
 	}
 
 	return new Partner(
@@ -270,6 +282,8 @@ function lockr_check_registration() {
 			$status = $client->exists();
 
 			$partner = lockr_get_partner();
+			$status['partner'] = $partner;
+
 			lockr_auto_register( $partner, $status['info']['env'] );
 		}
 	} catch ( LockrClientException $e ) {
@@ -295,7 +309,7 @@ function lockr_check_registration() {
  *   The encrypted and encoded ciphertext or null if encryption fails.
  */
 function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key' ) {
-	
+
 	$key = lockr_get_key( $key_name );
 	if ( ! $key ) {
 		return null;
@@ -304,29 +318,26 @@ function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key' ) {
 	$key = base64_decode( $key );
 
 	if ( version_compare( PHP_VERSION, '7.0.0' ) >= 0 ) {
-		
+
 		// Use the defuse library for openssl support.
-		
 		try {
 			// Defuse PHP-Encryption requires a key object instead of a string.
 			$key = Encoding::saveBytesToChecksummedAsciiSafeString( Key::KEY_CURRENT_VERSION, $key );
 			$key = Key::loadFromAsciiSafeString( $key );
-	
-			$ciphertext = Crypto::encrypt( $plaintext, $key, TRUE );
-	
+
+			$ciphertext = Crypto::encrypt( $plaintext, $key, true );
+
 			// Check if we are disabling base64 encoding.
 			$ciphertext = base64_encode( $ciphertext );
-	
+
 			$parts = array(
 				'cipher'     => 'openssl',
 				'key_name'   => $key_name,
 				'ciphertext' => $ciphertext,
 			);
-		  }
-		  catch (Ex $ex) {
+		} catch ( Ex $ex ) {
 			return null;
-		  }
-
+		}
 	} else {
 		$cipher = MCRYPT_RIJNDAEL_256;
 		$mode   = MCRYPT_MODE_CBC;
@@ -349,7 +360,7 @@ function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key' ) {
 			return null;
 		}
 
-		$parts   = array(
+		$parts = array(
 			'cipher'     => $cipher,
 			'mode'       => $mode,
 			'key_name'   => $key_name,
@@ -357,7 +368,7 @@ function lockr_encrypt( $plaintext, $key_name = 'lockr_default_key' ) {
 			'ciphertext' => $ciphertext,
 		);
 	}
-	
+
 	$encoded = wp_json_encode( $parts );
 	if ( json_last_error() !== JSON_ERROR_NONE ) {
 		return null;
@@ -398,16 +409,16 @@ function lockr_decrypt( $encoded ) {
 		return null;
 	}
 
-	if ( MCRYPT_RIJNDAEL_256 == $cipher ){
+	if ( MCRYPT_RIJNDAEL_256 === $cipher ) {
 		if ( ! isset( $parts['mode'] ) ) {
 			return null;
 		}
 		$mode = $parts['mode'];
-	
+
 		if ( ! isset( $parts['key_name'] ) ) {
 			return null;
 		}
-			
+
 		if ( ! isset( $parts['iv'] ) ) {
 			return null;
 		}
@@ -418,21 +429,19 @@ function lockr_decrypt( $encoded ) {
 		if ( ! isset( $parts['ciphertext'] ) ) {
 			return null;
 		}
-	
+
 		$plaintext = mcrypt_decrypt( $cipher, $key, $ciphertext, $mode, $iv );
 		if ( false === $plaintext ) {
 			return null;
 		}
 	} else {
-		try{
+		try {
 			// Use the defuse library for openssl support.
-
 			$key = Encoding::saveBytesToChecksummedAsciiSafeString( Key::KEY_CURRENT_VERSION, $key );
 			$key = Key::loadFromAsciiSafeString( $key );
-		
-			$plaintext = Crypto::decrypt( $ciphertext, $key, TRUE );
-		}	
-		catch (Ex $ex) {
+
+			$plaintext = Crypto::decrypt( $ciphertext, $key, true );
+		} catch ( Ex $ex ) {
 			return null;
 		}
 	}

@@ -649,7 +649,7 @@ function lockr_configuration_form() {
 				value="gencert" />
 			<?php submit_button( 'Generate Cert' ); ?>
 			<?php
-		} elseif ( 'dev' === $exists && $status['info']['env'] ) {
+		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $status['partner']['partner_certs'] ) {
 			?>
 			<p>
 			Click the button below to deploy this site to production.
