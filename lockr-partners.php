@@ -30,6 +30,7 @@ EOL;
 			'title'         => 'Pantheon',
 			'description'   => $desc,
 			'cert'          => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
+			'force_prod'    => false,
 			'partner_certs' => true,
 		);
 	}
@@ -239,7 +240,7 @@ EOL;
 			'dn'            => $dn,
 			'dirname'       => $dirname,
 			'force_prod'    => true,
-			'partner_certs' => true,
+			'partner_certs' => false,
 		);
 	}
 
@@ -292,6 +293,7 @@ function lockr_auto_register( $partner = array(), $env = null ) {
  * @param string  $dirname The directory to put the certificates in.
  * @param string  $env The Environment we are creating certificates for.
  * @param boolean $force_prod Force creating the production cert.
+ * @param boolean $partner_certs Whether the parnter already has certificates in place.
  */
 function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $env = null, $force_prod = false, $partner_certs = false ) {
 

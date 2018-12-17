@@ -589,6 +589,21 @@ function lockr_configuration_form() {
 		$exists     = $status['exists'];
 		$partner    = lockr_get_partner();
 
+		if ( null === $partner ) {
+			if ( file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
+				$force_prod    = true;
+				$partner_certs = false;
+			} else {
+				$force_prod    = false;
+				$partner_certs = false;
+			}
+		}
+
+		if ( $partner ) {
+			$force_prod    = $partner['force_prod'];
+			$partner_certs = $partner['partner_certs'];
+		}
+
 		if ( $partner ) {
 			?>
 
@@ -649,7 +664,7 @@ function lockr_configuration_form() {
 				value="gencert" />
 			<?php submit_button( 'Generate Cert' ); ?>
 			<?php
-		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $status['partner']['partner_certs'] ) {
+		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $force_prod && ! $partner_certs ) {
 			?>
 			<p>
 			Click the button below to deploy this site to production.
@@ -670,7 +685,7 @@ function lockr_configuration_form() {
 			<?php do_settings_fields( 'lockr', 'lockr_email' ); ?>
 			</table>
 
-			<?php if ( in_array( 'lockr-password', $error_codes ) ) : ?>
+			<?php if ( in_array( 'lockr-password', $error_codes, true ) ) : ?>
 				<table class="form-table">
 					<?php do_settings_fields( 'lockr', 'lockr_password' ); ?>
 				</table>
