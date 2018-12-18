@@ -428,16 +428,37 @@ function lockr_options_validate( $input ) {
 			return $options;
 		}
 
-		$rand_bytes = openssl_random_pseudo_bytes( 4 );
-		$dir        = WP_CONTENT_DIR . '/lockr/dev-' . bin2hex( $rand_bytes );
+		$dir = ABSPATH . '.lockr/dev';
 
 		lockr_write_cert_pair( $dir, $result );
 
 		update_option( 'lockr_partner', 'custom' );
-		update_option( 'lockr_cert', "{$dir}/pair.pem" );
+		delete_option( 'lockr_cert' );
 	} elseif ( 'migrate' === $op ) {
 		$cert_file = get_option( 'lockr_cert' );
+		if ( empty( $cert_file ) ) {
+			$dirname = ABSPATH . '.lockr';
+			if ( file_exists( $dirname . '/dev/pair.pem' ) ) {
+				$cert_file = $dirname . '/dev/pair.pem';
+			} else {
+				add_settings_error(
+					'lockr_options',
+					'lockr-csr',
+					'Lockr encountered an unexpected'
+				);
+				return $options;
+			}
+		}
+
 		$cert_info = openssl_x509_parse( file_get_contents( $cert_file ) );
+		if ( empty ( $cert_info ) ) {
+			add_settings_error(
+				'lockr_options',
+				'lockr-csr',
+				'Lockr encountered an unexpected'
+			);
+			return $options;
+		}
 
 		$subject = $cert_info['subject'];
 		$dn      = array(
@@ -467,19 +488,12 @@ function lockr_options_validate( $input ) {
 			return $options;
 		}
 
-		$rand_bytes = openssl_random_pseudo_bytes( 4 );
-		$dir        = WP_CONTENT_DIR . '/lockr/prod-' . bin2hex( $rand_bytes );
+		$dir = ABSPATH . '.lockr/prod';
 
 		lockr_write_cert_pair( $dir, $result );
 
-		update_option( 'lockr_cert', "{$dir}/pair.pem" );
-
-		$dirs = scandir( WP_CONTENT_DIR . '/lockr' );
-		foreach ( $dirs as $dir ) {
-			if ( substr( $dir, 0, 3 ) === 'dev' ) {
-				_lockr_rmtree( WP_CONTENT_DIR . "/lockr/{$dir}" );
-			}
-		}
+		delete_option( 'lockr_cert' );
+		update_option( 'lockr_prod_migrate', true );
 	} elseif ( 'advanced' === $op ) {
 		$cert_path = trim( $input['lockr_cert_path'] );
 
@@ -585,9 +599,10 @@ function lockr_configuration_form() {
 		<?php
 
 		settings_errors();
-		$cert_valid = $status['cert_valid'];
-		$exists     = $status['exists'];
-		$partner    = lockr_get_partner();
+		$cert_valid   = $status['cert_valid'];
+		$exists       = $status['exists'];
+		$partner      = lockr_get_partner();
+		$prod_migrate = get_option( 'lockr_prod_migrate', false );
 
 		if ( null === $partner ) {
 			if ( file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
@@ -664,11 +679,11 @@ function lockr_configuration_form() {
 				value="gencert" />
 			<?php submit_button( 'Generate Cert' ); ?>
 			<?php
-		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $force_prod && ! $partner_certs ) {
+		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $force_prod && ! $partner_certs && ! $prod_migrate ) {
 			?>
 			<p>
 			Click the button below to deploy this site to production.
-			This should only be done in your production enfironment as it writes
+			This should only be done in your production environment as it writes
 			a new certificate to the file system.
 			</p>
 			<input id="lockr_op"

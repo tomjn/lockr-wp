@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file
  * Class for the Lockr status table.
@@ -140,8 +139,8 @@ EOL;
 			$default = $is_custom ? 'lockr-error' : 'lockr-warning';
 			$is_custom_text = <<<EOL
 Uh oh!
-Without a credit card we cannot issue a production certificate.
-Please add one before migrating to production.
+Without a credit card we cannot continue the service beyond the trial period.
+Please add one before your trial ends.
 EOL;
 			$is_not_custom_text = "Since you're on a partnering host, a credit card is not necessary to move to production. However, please make sure you get a card on file ASAP. We will contact you if there is no card on file within 30 days of moving to production use.";
 			$default_description = $is_custom ? $is_custom_text : $is_not_custom_text;
