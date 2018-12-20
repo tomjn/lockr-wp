@@ -42,6 +42,9 @@ EOL;
 EOL;
 
 		$staging = false;
+		if ( defined( 'KINSTA_DEV_ENV' ) && KINSTA_DEV_ENV ) {
+			$staging = true;
+		}
 		$dirname = ABSPATH . '.lockr';
 
 		$dn = array(
@@ -101,7 +104,7 @@ EOL;
 		);
 	}
 
-	if ( isset( $_SERVER['IS_WPE'] ) && '1' === $_SERVER['IS_WPE'] ) {
+	if ( isset( $_SERVER['IS_WPE'] ) ) {
 		$desc = <<<EOL
 			We're detecting you're on WP Engine and a friend of theirs is a friend of ours.
 			Welcome to Lockr! We have already setup your connection automatically.
@@ -211,10 +214,13 @@ EOL;
 			We're detecting you're on Bluehost and a friend of theirs is a friend of ours.
 			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
+		$staging = false;
 
-		$staging = get_option( 'staging_environment' );
+		if ( 'staging' === get_option( 'staging_environment' ) ) {
+			$staging = true;
+		}
 
-		if ( 'staging' === $staging ) {
+		if ( $staging ) {
 			$dirname = ABSPATH . '../../.lockr';
 		} else {
 			$dirname = ABSPATH . '.lockr';
@@ -227,7 +233,7 @@ EOL;
 			'organizationName'    => 'Bluehost',
 		);
 
-		if ( 'staging' === $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert = $dirname . '/dev/pair.pem';
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
@@ -235,6 +241,42 @@ EOL;
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Bluehost',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
+		);
+	}
+
+	if ( defined( 'LWMWP_SITE' ) ) {
+		$desc = <<<EOL
+			We're detecting you're on Liquid Web and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
+EOL;
+		$staging = false;
+		if ( defined( 'LWMWP_STAGING_SITE' ) && LWMWP_STAGING_SITE ) {
+			$staging = true;
+		}
+
+		$dirname = ABSPATH . '.lockr';
+
+		$dn = array(
+			'countryName'         => 'US',
+			'stateOrProvinceName' => 'Michigan',
+			'localityName'        => 'Lansing',
+			'organizationName'    => 'LiquidWeb',
+		);
+
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+			$cert = $dirname . '/dev/pair.pem';
+		} else {
+			$cert = $dirname . '/prod/pair.pem';
+		}
+		return array(
+			'name'          => 'custom',
+			'title'         => 'Liquid Web',
 			'description'   => $desc,
 			'cert'          => $cert,
 			'dn'            => $dn,
