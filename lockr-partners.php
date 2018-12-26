@@ -78,6 +78,9 @@ EOL;
 EOL;
 
 		$staging = false;
+		if ( defined( 'WP_CONTENT_URL' ) && false !== strpos( WP_CONTENT_URL, 'flywheelstaging' ) ) {
+			$staging = true;
+		}
 		$dirname = '/www/.lockr';
 
 		$dn = array(
@@ -104,7 +107,7 @@ EOL;
 		);
 	}
 
-	if ( isset( $_SERVER['IS_WPE'] ) ) {
+	if ( isset( $_SERVER['IS_WPE'] ) && true == $_SERVER['IS_WPE'] ) {
 		$desc = <<<EOL
 			We're detecting you're on WP Engine and a friend of theirs is a friend of ours.
 			Welcome to Lockr! We have already setup your connection automatically.
@@ -150,6 +153,9 @@ EOL;
 EOL;
 
 		$staging = false;
+		if ( defined( 'GD_STAGING_SITE' ) && GD_STAGING_SITE ) {
+			$staging = true;
+		}
 		$dirname = ABSPATH . '.lockr';
 
 		$dn = array(
@@ -214,6 +220,7 @@ EOL;
 			We're detecting you're on Bluehost and a friend of theirs is a friend of ours.
 			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
+
 		$staging = false;
 
 		if ( 'staging' === get_option( 'staging_environment' ) ) {
@@ -255,6 +262,7 @@ EOL;
 			We're detecting you're on Liquid Web and a friend of theirs is a friend of ours.
 			Welcome to Lockr! We have already setup your connection automatically.
 EOL;
+
 		$staging = false;
 		if ( defined( 'LWMWP_STAGING_SITE' ) && LWMWP_STAGING_SITE ) {
 			$staging = true;
@@ -317,15 +325,13 @@ function lockr_auto_register( $partner = array(), $env = null ) {
 		$env = null;
 	}
 
-	if ( isset( $partner['dn'] ) && isset( $partner['dirname'] ) ) {
-		$dn            = $partner['dn'];
-		$dirname       = $partner['dirname'];
-		$force_prod    = $partner['force_prod'];
-		$partner_certs = $partner['partner_certs'];
-	}
+		$dn            = ( isset( $partner['dn'] ) ) ? $partner['dn'] : array();
+		$dirname       = ( isset( $partner['dirname'] ) ) ? $partner['dirname'] : ABSPATH . '.lockr';
+		$force_prod    = ( isset( $partner['force_prod'] ) ) ? $partner['force_prod'] : false;
+		$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
 
 	// Now that we have the information, let's create the certs.
-	create_partner_certs( $dn, $dirname, $env, $force_prod );
+	create_partner_certs( $dn, $dirname, $env, $force_prod, $partner_certs );
 }
 
 /**
@@ -339,7 +345,7 @@ function lockr_auto_register( $partner = array(), $env = null ) {
  */
 function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $env = null, $force_prod = false, $partner_certs = false ) {
 
-	if ( null === $env ) {
+	if ( null === $env && ! $partner_certs ) {
 		$partner_null   = new NullPartner( 'us' );
 		$partner_client = Lockr::create( $partner_null );
 		$dev_client     = new SiteClient( $partner_client );
