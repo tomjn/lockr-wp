@@ -294,6 +294,43 @@ EOL;
 		);
 	}
 
+	if ( defined( 'IS_PRESSABLE' ) ) {
+		$desc = <<<EOL
+			We're detecting you're on Pressable and a friend of theirs is a friend of ours.
+			Welcome to Lockr! We have already setup your connection automatically.
+EOL;
+
+		$staging = false;
+		if ( defined( 'WPMU_PLUGIN_URL' ) && false !== strpos( WPMU_PLUGIN_URL, 'mystagingwebsite.com' ) ) {
+			$staging = true;
+		}
+
+		$dirname = str_replace( 'wp-content', '.lockr', WP_CONTENT_DIR );
+
+		$dn = array(
+			'countryName'         => 'US',
+			'stateOrProvinceName' => 'Texas',
+			'localityName'        => 'San Antonio',
+			'organizationName'    => 'Pressable',
+		);
+
+		if ( $staging || ! file_exists( $dirname . '/prod/pair.pem' ) ) {
+			$cert = $dirname . '/dev/pair.pem';
+		} else {
+			$cert = $dirname . '/prod/pair.pem';
+		}
+		return array(
+			'name'          => 'custom',
+			'title'         => 'Pressable',
+			'description'   => $desc,
+			'cert'          => $cert,
+			'dn'            => $dn,
+			'dirname'       => $dirname,
+			'force_prod'    => true,
+			'partner_certs' => false,
+		);
+	}
+
 	return null;
 }
 
@@ -305,27 +342,19 @@ EOL;
  */
 function lockr_auto_register( $partner = array(), $env = null ) {
 
-	if ( empty( $partner['title'] ) ) {
-
-		// If there's no partner, then auto create the certs.
-		$dirname = ABSPATH . '.lockr';
-
-		$dn = array(
-			'countryName'         => 'US',
-			'stateOrProvinceName' => 'Washington',
-			'localityName'        => 'Tacoma',
-			'organizationName'    => 'Lockr',
-		);
-
-		$force_prod = false;
-	}
+	$dn = array(
+		'countryName'         => 'US',
+		'stateOrProvinceName' => 'Washington',
+		'localityName'        => 'Tacoma',
+		'organizationName'    => 'Lockr',
+	);
 
 	// Sanitize the $env for use below.
 	if ( 'dev' !== $env && 'prod' !== $env && null !== $env ) {
 		$env = null;
 	}
 
-		$dn            = ( isset( $partner['dn'] ) ) ? $partner['dn'] : array();
+		$dn            = ( isset( $partner['dn'] ) ) ? $partner['dn'] : $dn;
 		$dirname       = ( isset( $partner['dirname'] ) ) ? $partner['dirname'] : ABSPATH . '.lockr';
 		$force_prod    = ( isset( $partner['force_prod'] ) ) ? $partner['force_prod'] : false;
 		$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
