@@ -132,7 +132,7 @@ function lockr_install() {
 		add_option( 'lockr_partner', $partner['name'] );
 	}
 
-	lockr_auto_register( $partner );
+	// lockr_auto_register( $partner );
 }
 
 /**
@@ -245,7 +245,9 @@ function lockr_partner() {
 	$detected_partner = lockr_get_partner();
 	if ( ! $detected_partner ) {
 		// User is not on any detected partner or custom certificate location.
-		$dirname = ABSPATH . '.lockr';
+		$dirname   = ABSPATH . '.lockr';
+		$cert_path = null;
+
 		if ( file_exists( $dirname . '/prod/pair.pem' ) ) {
 			$cert_path = $dirname . '/prod/pair.pem';
 		} elseif ( file_exists( $dirname . '/dev/pair.pem' ) ) {
@@ -296,7 +298,7 @@ function lockr_check_registration() {
 			$partner           = lockr_get_partner();
 			$status['partner'] = $partner;
 
-			lockr_auto_register( $partner, $status['info']['env'] );
+			// lockr_auto_register( $partner, $status['info']['env'] );
 		}
 	} catch ( LockrClientException $e ) {
 		$status = array(

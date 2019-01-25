@@ -17,3 +17,7 @@
 .lockr-config .status.lockr-warning{
 	color: #FFBA00;
 }
+
+#client-token #submit{
+	display: none;
+}

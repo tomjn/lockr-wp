@@ -20,11 +20,13 @@ class Lockr_Status extends WP_List_Table {
 	 * Get things started with the table.
 	 */
 	public function __construct() {
-		parent::__construct(array(
-			'singular' => __( 'Status', 'lockr' ),
-			'plural'   => __( 'Statuses', 'lockr' ),
-			'ajax'     => false,
-		));
+		parent::__construct(
+			array(
+				'singular' => __( 'Status', 'lockr' ),
+				'plural'   => __( 'Statuses', 'lockr' ),
+				'ajax'     => false,
+			)
+		);
 	}
 
 	/**

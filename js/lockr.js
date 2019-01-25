@@ -62,4 +62,20 @@ jQuery( function ( $ ) {
 			$("#option-total-number").val(optionNumber);
 		}
 	});
+
+	$('#client-token #token-button').click(function () {
+		var url = 'https://lockraccountsd7.lndo.site/register-site';
+		 if (lockr_settings.name) {
+				var site_name = encodeURIComponent(lockr_settings.name).replace(/%20/g, '+');
+				url += '?site_label=' + site_name;
+		}
+		var popup = window.open(url, 'LockrRegister', 'toolbar=off,height=850,width=650');
+		window.addEventListener('message', function (e) {
+				var client_token = e.data.client_token;
+				popup.close();
+				$('#client-token #lockr_client_token').val(client_token);
+				$('#client-token #submit').click();
+		}, false);
+	});
 });
+

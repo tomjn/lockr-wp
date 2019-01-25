@@ -20,31 +20,17 @@ if ( ! function_exists( 'add_action' ) ) {
 function register_lockr_settings() {
 	register_setting( 'lockr_options', 'lockr_options', 'lockr_options_validate' );
 	add_settings_section(
-		'lockr_email',
-		'Email Address',
-		'lockr_email_text',
-		'lockr'
+		'lockr_token',
+		'Client Token',
+		'lockr_token_text',
+		'lockr_register_token'
 	);
 	add_settings_field(
-		'lockr_account_email',
-		'Email Address',
-		'lockr_account_email_input',
+		'lockr_client_token',
+		'',
+		'lockr_client_token_input',
 		'lockr',
-		'lockr_email'
-	);
-
-	add_settings_section(
-		'lockr_password',
-		'Account Password',
-		'lockr_password_text',
-		'lockr'
-	);
-	add_settings_field(
-		'lockr_account_password',
-		'Account Password',
-		'lockr_account_password_input',
-		'lockr',
-		'lockr_password'
+		'lockr_token'
 	);
 
 	add_settings_section(
@@ -83,47 +69,12 @@ function register_lockr_settings() {
 		'lockr',
 		'lockr_hash_pass'
 	);
-
-	add_settings_section(
-		'lockr_csr',
-		'Certificate Signing Request',
-		'lockr_csr_text',
-		'lockr'
-	);
-	add_settings_field(
-		'lockr_csr_country',
-		'Country',
-		'lockr_csr_country_input',
-		'lockr',
-		'lockr_csr'
-	);
-	add_settings_field(
-		'lockr_csr_state',
-		'State or Province',
-		'lockr_csr_state_input',
-		'lockr',
-		'lockr_csr'
-	);
-	add_settings_field(
-		'lockr_csr_city',
-		'Locality',
-		'lockr_csr_city_input',
-		'lockr',
-		'lockr_csr'
-	);
-	add_settings_field(
-		'lockr_csr_org',
-		'Organization',
-		'lockr_csr_org_input',
-		'lockr',
-		'lockr_csr'
-	);
 }
 
 /**
  * Create email text field.
  */
-function lockr_email_text() {
+function lockr_token_text() {
 }
 
 /**
@@ -139,64 +90,6 @@ function lockr_request_text() {
 }
 
 /**
- * Create Lockr csr text field.
- */
-function lockr_csr_text() {
-}
-
-/**
- * Create Lockr csr country text field.
- */
-function lockr_csr_country_input() {
-
-	?>
-<input id="lockr_csr_country"
-	name="lockr_options[lockr_csr_country]"
-	placeholder="US" />
-
-	<?php
-}
-
-/**
- * Create Lockr csr state text field.
- */
-function lockr_csr_state_input() {
-
-	?>
-<input id="lockr_csr_state"
-	name="lockr_options[lockr_csr_state]"
-	placeholder="Washington" />
-
-	<?php
-}
-
-/**
- * Create Lockr csr city text field.
- */
-function lockr_csr_city_input() {
-
-	?>
-<input id="lockr_csr_city"
-	name="lockr_options[lockr_csr_city]"
-	placeholder="Seattle" />
-
-	<?php
-}
-
-/**
- * Create Lockr csr org text field.
- */
-function lockr_csr_org_input() {
-
-	?>
-<input id="lockr_csr_org"
-	name="lockr_options[lockr_csr_org]"
-	placeholder="ACME Inc." />
-
-	<?php
-}
-
-/**
  * Create Lockr registration header text.
  */
 function lockr_register_text() {
@@ -206,32 +99,14 @@ function lockr_register_text() {
 /**
  * Create Lockr email text field.
  */
-function lockr_account_email_input() {
-	$options = get_option( 'lockr_options' );
-	$value   = isset( $options['account_email'] )
-		? $options['account_email']
-		: '';
+function lockr_client_token_input() {
 
 	?>
-<input id="lockr_account_email"
-	name="lockr_options[account_email]"
+<input id="lockr_client_token"
+	name="lockr_options[lockr_client_token]"
 	size="60"
-	type="email"
-	alue="<?php echo esc_attr( $value ); ?>" />
-
-	<?php
-}
-
-/**
- * Create Lockr partner text field.
- */
-function lockr_partner_name_input() {
-
-	?>
-<input id="lockr_partner_name"
-	name="lockr_options[partner_name]"
-	size="60"
-	type="text" />
+	type="hidden"
+	value="" />
 
 	<?php
 }
@@ -399,12 +274,12 @@ function lockr_options_validate( $input ) {
 	}
 	$op = $input['lockr_op'];
 
-	if ( 'gencert' === $op ) {
+	if ( 'createClient' === $op ) {
 		$dn = array(
-			'countryName'         => $input['lockr_csr_country'],
-			'stateOrProvinceName' => $input['lockr_csr_state'],
-			'localityName'        => $input['lockr_csr_city'],
-			'organizationName'    => $input['lockr_csr_org'],
+			'countryName'         => 'US',
+			'stateOrProvinceName' => 'Washington',
+			'localityName'        => 'Tacoma',
+			'organizationName'    => 'Lockr',
 		);
 		delete_option( 'lockr_cert' );
 
@@ -423,7 +298,7 @@ function lockr_options_validate( $input ) {
 			add_settings_error(
 				'lockr_options',
 				'lockr-csr',
-				'Lockr encountered an unexpected'
+				'Lockr encountered an unexpected error'
 			);
 			return $options;
 		}
@@ -451,7 +326,7 @@ function lockr_options_validate( $input ) {
 		}
 
 		$cert_info = openssl_x509_parse( file_get_contents( $cert_file ) );
-		if ( empty ( $cert_info ) ) {
+		if ( empty( $cert_info ) ) {
 			add_settings_error(
 				'lockr_options',
 				'lockr-csr',
@@ -528,45 +403,6 @@ function lockr_options_validate( $input ) {
 		update_option( 'lockr_encrypt_posts', $input['lockr_encrypt_posts'] );
 		update_option( 'lockr_hash_pass', $input['lockr_hash_pass'] );
 		update_option( 'lockr_region', $input['lockr_region'] );
-	} elseif ( 'register' === $op ) {
-		$options['account_email'] = trim( $input['account_email'] );
-		if ( isset( $input['account_password'] ) ) {
-			$options['account_password'] = trim( $input['account_password'] );
-		} else {
-			$options['account_password'] = '';
-		}
-
-		$name = get_bloginfo( 'name', 'display' );
-
-		if ( ! filter_var( $options['account_email'], FILTER_VALIDATE_EMAIL ) ) {
-			add_settings_error( 'lockr_options', 'lockr-email', $options['account_email'] . ' is not a proper email address. Please try again.', 'error' );
-			$options['account_email'] = '';
-		} else {
-			// I guess this form double-posts? Seems like WordPress weirdness.
-			$status = lockr_check_registration();
-			$exists = $status['exists'];
-			if ( ! $exists ) {
-				try {
-					lockr_site_client()->register( $options['account_email'], null, $name );
-				} catch ( LockrClientException $e ) {
-					if ( ! $options['account_password'] ) {
-						add_settings_error( 'lockr_options', 'lockr-password', 'Please enter your password to add this site to your Lockr account.', 'error' );
-						return $options;
-					}
-					try {
-						lockr_site_client()->register( $options['account_email'], $options['account_password'], $name );
-					} catch ( LockrClientException $e ) {
-						add_settings_error( 'lockr_options', 'lockr-email', 'Login credentials incorrect, please try again.', 'error' );
-					} catch ( LockrServerException $e ) {
-						add_settings_error( 'lockr_options', 'lockr-email', 'An unknown error has occurred, please try again later.', 'error' );
-					}
-				} catch ( LockrServerException $e ) {
-					add_settings_error( 'lockr_options', 'lockr-email', 'An unknown error has occurred, please try again later.', 'error' );
-				}
-			}
-		}
-		$options['account_password'] = '';
-		return $options;
 	}
 }
 
@@ -594,7 +430,7 @@ function lockr_configuration_form() {
 
 	?>
 	<div class="wrap lockr-config">
-		<h1>Lockr Registration</h1>
+		<h1>Lockr Setup</h1>
 
 		<?php
 
@@ -622,7 +458,8 @@ function lockr_configuration_form() {
 		if ( $partner ) {
 			?>
 
-			<h4><?php echo esc_attr( $partner['description'] ); ?></h4>
+			<h2>Hello <?php echo esc_attr( $partner['title'] ); ?> Customer!</h2>
+			<p><?php echo esc_attr( $partner['description'] ); ?></p>
 			<?php
 
 		}
@@ -633,8 +470,10 @@ function lockr_configuration_form() {
 			All systems are go!
 			Your site is registered, your certificate is valid, and everything seems
 			good on our end.
-			The table below will give you the status of all elements.
-			Should anything look out of the ordinary just let us know on the Slack
+			To make things simple we've laid out a few key elements (pun intended)
+			that the system requires in order to run.
+			Should anything look out of the ordinary just let us know on the
+			<a href="http://slack.lockr.io">Slack</a>
 			channel and we'd be happy to help.
 			Happy Keying!
 			</p>
@@ -663,21 +502,25 @@ function lockr_configuration_form() {
 
 		?>
 
-		<form method="post" action="options.php">
+		<form id="client-token" method="post" action="options.php">
 
 		<?php
 		settings_fields( 'lockr_options' );
 
 		if ( ! $cert_valid ) {
 			?>
-			<table class="form-table">
-				<?php do_settings_fields( 'lockr', 'lockr_csr' ); ?>
-			</table>
+			<p>
+			You're one click away from getting everything setup! Click on the button below and we'll
+			pop up a window that will help you to create a new KeyRing (or connect to an existing one).
+			Simply follow the prompts in that window and we'll do the rest.
+			</p>
+			<button type="button" id="token-button" class="button button-primary">Connect Site to a KeyRing</button>
+			<?php do_settings_fields( 'lockr', 'lockr_token' ); ?>
 			<input id="lockr_op"
 				name="lockr_options[lockr_op]"
 				type="hidden"
-				value="gencert" />
-			<?php submit_button( 'Generate Cert' ); ?>
+				value="createClient" />
+			<?php submit_button( 'Create KeyRing Client' ); ?>
 			<?php
 		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $force_prod && ! $partner_certs && ! $prod_migrate ) {
 			?>
@@ -691,26 +534,6 @@ function lockr_configuration_form() {
 				type="hidden"
 				value="migrate" />
 			<?php submit_button( 'Migrate to Production' ); ?>
-			<?php
-		}
-
-		if ( ! $exists && $cert_valid ) {
-			?>
-			<table class="form-table">
-			<?php do_settings_fields( 'lockr', 'lockr_email' ); ?>
-			</table>
-
-			<?php if ( in_array( 'lockr-password', $error_codes, true ) ) : ?>
-				<table class="form-table">
-					<?php do_settings_fields( 'lockr', 'lockr_password' ); ?>
-				</table>
-			<?php endif; ?>
-			<input id="lockr_op"
-				name="lockr_options[lockr_op]"
-				type="hidden"
-				value="register" />
-			<?php submit_button( 'Register Site' ); ?>
-			<hr>
 			<?php
 		}
 		?>

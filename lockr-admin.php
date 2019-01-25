@@ -54,6 +54,11 @@ function lockr_admin_styles( $hook ) {
 		wp_enqueue_script( 'lockrScript', plugins_url( 'js/lockr-post.js', __FILE__ ), array(), '2.4', true );
 	}
 
+	$site_information = array(
+		'name' => get_option( 'blogname' ),
+	);
+	wp_localize_script( 'lockrScript', 'lockr_settings', $site_information );
+
 }
 add_action( 'admin_enqueue_scripts', 'lockr_admin_styles' );
 

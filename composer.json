@@ -1,0 +1,19 @@
+{
+    "name": "drupal/lockr",
+    "type": "drupal-module",
+    "homepage": "https://drupal.org/project/lockr",
+    "authors": [
+        {
+            "name": "Tynor Fujimoto",
+            "homepage": "https://www.drupal.org/u/tynor",
+            "email": "tynor@lockr.io"
+        }
+    ],
+    "support": {
+        "issues": "https://drupal.org/project/issues/lockr"
+    },
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "lockr/lockr-client": "v2.x-dev"
+    }
+}
