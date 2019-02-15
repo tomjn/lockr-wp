@@ -19,11 +19,13 @@ class Lockr_Key_List extends WP_List_Table {
 	 *  Get things started with the table.
 	 */
 	public function __construct() {
-		parent::__construct(array(
-			'singular' => __( 'Key', 'lockr' ),
-			'plural'   => __( 'Keys', 'lockr' ),
-			'ajax'     => false,
-		));
+		parent::__construct(
+			array(
+				'singular' => __( 'Key', 'lockr' ),
+				'plural'   => __( 'Keys', 'lockr' ),
+				'ajax'     => false,
+			)
+		);
 	}
 
 	/**
@@ -54,6 +56,7 @@ class Lockr_Key_List extends WP_List_Table {
 			'cb'           => '<input type="checkbox" />',
 			'key_label'    => __( 'Key Name' ),
 			'key_abstract' => __( 'Key Value' ),
+			'dev_abstract' => __( 'Dev Value' ),
 			'time'         => __( 'Created' ),
 			'edit'         => '',
 		);
@@ -85,12 +88,16 @@ class Lockr_Key_List extends WP_List_Table {
 				return $item->key_label;
 			case 'key_abstract':
 				return $item->key_abstract;
+			case 'dev_abstract':
+				return $item->dev_abstract;
 			case 'time':
 				return $item->time;
 			case 'edit':
-				$url  = admin_url( 'admin.php?page=lockr-edit-key' );
-				$url .= '&key=' . $item->key_name;
-				return "<a href='$url' >edit</a>";
+				if ( ! $item->auto_created ) {
+					$url  = admin_url( 'admin.php?page=lockr-edit-key' );
+					$url .= '&key=' . $item->key_name;
+					return "<a href='$url' >edit</a>";
+				}
 		}
 	}
 
@@ -133,11 +140,13 @@ class Lockr_Key_List extends WP_List_Table {
 		}
 
 		// Register the pagination.
-		$this->set_pagination_args( array(
-			'total_items' => $totalitems,
-			'total_pages' => $totalpages,
-			'per_page'    => $perpage,
-		) );
+		$this->set_pagination_args(
+			array(
+				'total_items' => $totalitems,
+				'total_pages' => $totalpages,
+				'per_page'    => $perpage,
+			)
+		);
 
 		$columns  = $this->get_columns();
 		$hidden   = array();

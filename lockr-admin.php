@@ -69,23 +69,42 @@ if ( ! get_option( 'lockr_partner' ) ) {
  * Create a table of all the keys in Lockr.
  */
 function lockr_keys_table() {
-	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
 
 	global $wpdb;
-	$table_name  = $wpdb->prefix . 'lockr_keys';
-	$query       = "SELECT * FROM $table_name WHERE key_name = 'lockr_default_key'";
-	$default_key = $wpdb->query( $query ); // WPCS: unprepared SQL OK.
-
+	$table_name      = $wpdb->prefix . 'lockr_keys';
+	$query           = "SELECT * FROM $table_name WHERE key_name = 'lockr_default_key'";
+	$default_key     = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
+	$status          = lockr_check_registration();
+	$exists          = $status['exists'];
+	$available       = $status['available'];
 	$deleted_default = get_option( 'lockr_default_deleted' );
+	$auto_created    = (int) $default_key[0]->auto_created;
+
 	if ( $exists && ! $default_key && ! $deleted_default ) {
 		// Create a default encryption key.
 		$client    = lockr_key_client();
 		$key_value = base64_encode( $client->create( 256 ) );
 
-		lockr_set_key( 'lockr_default_key', $key_value, 'Lockr Default Encryption Key' );
+		lockr_set_key( 'lockr_default_key', $key_value, 'Lockr Default Encryption Key', null, true );
 	}
+	if ( $default_key && ! $auto_created ) {
+		$key_id    = array( 'id' => $default_key[0]->id );
+		$key_data  = array( 'auto_created' => true );
+		$key_store = $wpdb->update( $table_name, $key_data, $key_id );
+	}
+
+	if ( isset( $status['info']['env'] ) ) {
+
+		if ( 'prod' === $status['info']['env'] ) {
+			$environment = $status['info']['env'];
+		} else {
+			$environment = 'dev';
+		}
+		if ( ! get_option( 'lockr_' . $environment . '_abstract_migrated' ) ) {
+			lockr_update_abstracts( $environment );
+		}
+	}
+
 	$key_table = new Lockr_Key_List();
 	$key_table->prepare_items();
 	?>
@@ -111,3 +130,34 @@ function lockr_keys_table() {
 	<?php
 }
 
+
+/**
+ * Migrate the abstracts into their correct environment display.
+ *
+ * @param string $environment What environment the site is in.
+ */
+function lockr_update_abstracts( $environment ) {
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'lockr_keys';
+	$query      = "SELECT * FROM $table_name";
+	$keys       = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
+
+	foreach ( $keys as $key ) {
+		$key_value = lockr_get_key( $key->key_name );
+
+		if ( $key_value ) {
+			$key_abstract = '**************' . substr( $key_value, -4 );
+			$key_id       = array( 'id' => $key->id );
+
+			if ( 'prod' !== $environment ) {
+				$key_data = array( 'dev_abstract' => $key_abstract );
+			} else {
+				$key_data = array( 'key_abstract' => $key_abstract );
+			}
+
+			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
+		}
+	}
+	update_option( 'lockr_' . $environment . '_abstract_migrated', true );
+}

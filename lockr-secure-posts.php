@@ -126,7 +126,7 @@ function lockr_secure_post_postpass_session() {
 	global $wp;
 	global $post;
 	$hash_pass = get_option( 'lockr_hash_pass' );
-	if ( class_exists( Pantheon_sessions ) && ! empty( $post->post_password ) && ! empty( $hash_pass ) ) {
+	if ( class_exists( 'Pantheon_sessions' ) && ! empty( $post->post_password ) && ! empty( $hash_pass ) ) {
 
 		if ( ! session_id() ) {
 			session_start();
@@ -142,6 +142,7 @@ function lockr_secure_post_postpass_session() {
 }
 
 add_action( 'wp', 'lockr_secure_post_postpass_session' );
+
 /**
  * Check for hashed passwords used for protecting posts.
  *
@@ -164,4 +165,5 @@ function lockr_password_form_check( $required, $post ) {
 		}
 	}
 }
+
 add_filter( 'post_password_required', 'lockr_password_form_check', 10000, 2 );

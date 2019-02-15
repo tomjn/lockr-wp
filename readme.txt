@@ -55,7 +55,9 @@ Installation of Lockr is simple, and if you are on a supported hosting partner, 
 6. Once the dashboard shows you as having a certificate and registration you're done!
 7. When ready to deploy to production, follow the prompts provided which will remove the development certificate and place a production one in its place. With production you're in our guaranteed uptime environment.
 
-You're set! Start entering your keys through the Lockr config or by using our integrations with other plugins!
+You're set! Start entering your keys through the Lockr config or creating option overrides to integrate with other plugins! To get the values out of Lockr all you will need is the function lockr_get_key([machine_name_of_key]) where you put in the machine name of the key you have set.
+
+Be sure to check out our [docs](https://docs.lockr.io) for more details.
 
 
 == Frequently Asked Questions ==

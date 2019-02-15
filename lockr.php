@@ -89,7 +89,7 @@ if ( is_admin() ) {
  * Set our db version which will be updated should the schema change.
  */
 global $lockr_db_version;
-$lockr_db_version = '1.1';
+$lockr_db_version = '1.2';
 
 /**
  * Initial setup when the plugin is activated.
@@ -110,6 +110,8 @@ function lockr_install() {
 			key_value text NOT null,
 			key_label text NOT null,
 			key_abstract text,
+			dev_abstract text,
+			auto_created tinyint(1),
 			option_override text,
 			UNIQUE KEY id (id)
 		) $charset_collate;";
@@ -117,7 +119,11 @@ function lockr_install() {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 
-		add_option( 'lockr_db_version', $lockr_db_version );
+		if ( ! $current_lockr_db_version ) {
+			update_option( 'lockr_prod_abstract_migrated', true );
+			update_option( 'lockr_dev_abstract_migrated', true );
+		}
+		update_option( 'lockr_db_version', $lockr_db_version );
 	}
 
 	$partner = lockr_get_partner();
@@ -267,6 +273,12 @@ function lockr_partner() {
  * true if this site is registered, false if not.
  */
 function lockr_check_registration() {
+
+	static $status;
+
+	if ( $status ) {
+		return $status;
+	}
 	$status = array(
 		'cert_valid' => false,
 		'exists'     => false,
@@ -281,7 +293,7 @@ function lockr_check_registration() {
 		if ( $client ) {
 			$status = $client->exists();
 
-			$partner = lockr_get_partner();
+			$partner           = lockr_get_partner();
 			$status['partner'] = $partner;
 
 			lockr_auto_register( $partner, $status['info']['env'] );
@@ -466,13 +478,28 @@ function lockr_get_key( $key_name ) {
 	}
 
 	$encoded = $key_store[0]->key_value;
+	$auto_created = $key_store[0]->auto_created;
 	$client  = lockr_key_client();
 
 	try {
 		if ( $client ) {
-			return $client->encrypted( $encoded )->get( $key_name );
+			$key_value = $client->encrypted( $encoded )->get( $key_name );
+			return $key_value;
 		} else {
 			return false;
+		}
+	} catch ( LockrClientException $e ) {
+		// if 404 do the following.
+		if ( 404 === $e->getCode() ) {
+			if ( ! $key_value && $auto_created ) {
+				$status = lockr_check_registration();
+				if ( isset( $status['info']['env'] ) ) {
+
+					$key_value = base64_encode( $client->create( 256 ) );
+					$key_set   = lockr_set_key( $key_name, $key_value, $key_store[0]->key_label, null, true );
+					return $key_value;
+				}
+			}
 		}
 	} catch ( \Exception $e ) {
 		return false;
@@ -486,10 +513,11 @@ function lockr_get_key( $key_name ) {
  * @param string      $key_value The key value.
  * @param string      $key_label The key label.
  * @param string|bool $option_override The exisiting key metadata if it exists.
+ * @param bool        $auto_created if the key was programatically created by Lockr.
  *
  * @return bool true if they key set successfully, false if not.
  */
-function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null ) {
+function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null, $auto_created = false ) {
 	global $wpdb;
 	$table_name   = $wpdb->prefix . 'lockr_keys';
 	$key_abstract = '**************' . substr( $key_value, -4 );
@@ -526,9 +554,17 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
 			'key_name'        => $key_name,
 			'key_label'       => $key_label,
 			'key_value'       => $key_remote,
-			'key_abstract'    => $key_abstract,
 			'option_override' => $option_override,
+			'auto_created'    => $auto_created,
 		);
+
+		$status = lockr_check_registration();
+
+		if ( isset( $status['info']['env'] ) && 'prod' !== $status['info']['env'] ) {
+			$key_data['dev_abstract'] = $key_abstract;
+		} else {
+			$key_data['key_abstract'] = $key_abstract;
+		}
 
 		if ( ! empty( $key_exists ) ) {
 			$key_id    = array( 'id' => $key_exists[0]->id );

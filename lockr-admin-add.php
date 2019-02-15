@@ -33,17 +33,21 @@ function lockr_admin_submit_add_key() {
 	} else {
 		$key_name = '';
 	}
+
+	$auto_created = false;
+
 	if ( isset( $_POST['create_key'] ) && 'on' === $_POST['create_key'] ) {
 		// Create a default encryption key.
-		$client    = lockr_key_client();
-		$key_value = base64_encode( $client->create( 256 ) );
+		$client       = lockr_key_client();
+		$key_value    = base64_encode( $client->create( 256 ) );
+		$auto_created = true;
 	} elseif ( isset( $_POST['key_value'] ) ) {
 		$key_value = sanitize_text_field( wp_unslash( $_POST['key_value'] ) );
 	} else {
 		$key_value = '';
 	}
 
-	$key_store = lockr_set_key( $key_name, $key_value, $key_label );
+	$key_store = lockr_set_key( $key_name, $key_value, $key_label, null, $auto_created );
 
 	if ( false !== $key_store ) {
 		// Successfully Added.
