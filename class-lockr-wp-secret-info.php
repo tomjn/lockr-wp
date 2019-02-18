@@ -44,17 +44,38 @@ class Lockr_WP_Secret_Info implements SecretInfoInterface {
 	 *
 	 * @param string $name The name of the key stored in Lockr.
 	 * @param array  $info The array of information used to find and decrypt the value.
+	 *
+	 * @throws \Exception If the database does not connect we cannot store information.
 	 */
 	public function setSecretInfo( $name, array $info ) {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'lockr_keys';
-		$key_data = array(
-			'key_value' => wp_json_encode( $info ),
-		);
-		$where = array(
-			'key_name' => $name,
-		);
-		$wpdb->update( $table_name, $key_data, $where );
+		$key_exists = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $name ) ) ); // WPCS: unprepared SQL OK.
+		$key_store  = false;
+
+		if ( $key_exists ) {
+			$key_data  = array(
+				'key_value' => wp_json_encode( $info ),
+			);
+			$where     = array(
+				'key_name' => $name,
+			);
+			$key_store = $wpdb->update( $table_name, $key_data, $where );
+		} else {
+			$key_data  = array(
+				'time'            => date( 'Y-m-d H:i:s' ),
+				'key_name'        => $name,
+				'key_label'       => '',
+				'key_abstract'    => '',
+				'option_override' => '',
+				'key_value'       => wp_json_encode( $info ),
+			);
+			$key_store = $wpdp->insert( $table_name, $key_data );
+		}
+
+		if ( ! $key_store ) {
+			throw new \Exception( 'Could not store the new key data in the database.' );
+		}
 	}
 
 	/**

@@ -3,126 +3,143 @@ namespace Lockr;
 
 use DateTime;
 
+use GuzzleHttp;
 use GuzzleHttp\Psr7;
 
 class LockrAdmin
 {
-    /** @var LoaderInterface $loader */
-    private $loader;
+    /** @var LockrClient $client */
+    protected $client;
 
     /**
-     * @param LoaderInterface $loader
+     * @param LockrClient $client
      */
-    public function __construct(LoaderInterface $loader)
+    public function __construct(LockrClient $client)
     {
-        $this->loader = $loader;
+        $this->client = $client;
     }
 
     /**
      * @param string $label
-     * @param string $status
+     * @param bool $has_cc
+     * @param DateTime $trial_end
      *
-     * @return Model\Site
+     * @return string
      */
-    public function createSite($label, $status)
+    public function createKeyring($label, $has_cc, DateTime $trial_end)
     {
-        return $this->loader->create([
-            'type' => 'site',
-            'attributes' => [
-                'label' => $label,
-                'status' => $status,
+        $query = <<<'EOQ'
+mutation CreateKeyring($input: CreateKeyring!) {
+    createKeyring(input: $input) {
+        id
+    }
+}
+EOQ;
+        $data = $this->client->query([
+            'query' => $query,
+            'variables' => [
+                'input' => [
+                    'label' => $label,
+                    'hasCC' => $has_cc,
+                    'trialEnd' => $trial_end->format(DateTime::RFC3339),
+                ],
             ],
         ]);
+        return $data['createKeyring']['id'];
     }
 
     /**
-     * @param string $site_id
-     *
-     * @return Model\Site
-     */
-    public function loadSite($site_id)
-    {
-        return $this->loader->load('site', $site_id);
-    }
-
-    /**
-     * @param string $site_id
+     * @param string $keyring_id
      * @param string $label
-     * @param string $status
-     *
-     * @return Model\Site|null
      */
-    public function updateSite($site_id, $label = null, $status = null)
+    public function updateKeyringLabel($keyring_id, $label)
     {
-        $attrs = [];
-        if ($label !== null) {
-            $attrs['label'] = $label;
-        }
-        if ($status !== null) {
-            $attrs['status'] = $status;
-        }
-        if (!$attrs) {
-            return null;
-        }
-        return $this->loader->update([
-            'type' => 'site',
-            'id' => $site_id,
-            'attributes' => $attrs,
-        ]);
+        $query = <<<'EOQ'
+mutation UpdateKeyring($input: UpdateKeyringLabel!) {
+    updateKeyringLabel(input: $input) {
+        id
     }
-
-    /**
-     * @param string $site_id
-     * @param string $env
-     *
-     * @return Model\ClientToken
-     */
-    public function createClientToken($site_id, $env)
-    {
-        return $this->loader->create([
-            'type' => 'client-token',
-            'attributes' => ['env' => $env],
-            'relationships' => [
-                'site' => [
-                    'data' => [
-                        'type' => 'site',
-                        'id' => $site_id,
-                    ],
+}
+EOQ;
+        $this->client->query([
+            'query' => $query,
+            'variables' => [
+                'input' => [
+                    'keyringId' => $keyring_id,
+                    'label' => $label,
                 ],
             ],
         ]);
     }
 
     /**
-     * @param DateTime $since
-     * @param DateTime $until
-     * @param string[] $site_ids
+     * @param string $keyring_id
+     * @param string $env
+     * @param string $label
+     *
+     * @return string
+     */
+    public function createClientToken($keyring_id, $env, $label)
+    {
+        $query = <<<'EOQ'
+mutation CreateClientToken($input: CreateClientToken!) {
+  createClientToken(input: $input) {
+    token
+  }
+}
+EOQ;
+        $data = $this->client->query([
+            'query' => $query,
+            'variables' => [
+                'input' => [
+                    'keyringId' => $keyring_id,
+                    'clientLabel' => $label,
+                    'clientEnv' => $env,
+                ],
+            ],
+        ]);
+        return $data['createClientToken']['token'];
+    }
+
+    /**
+     * Gets a summary of secret usage.
+     *
+     * @param DateTime $start
+     * @param DateTime $end
      *
      * @return array
      */
-    public function getUsage(
-        DateTime $since,
-        DateTime $until = null,
-        array $site_ids = null
-    ) {
-        $uri = new Psr7\Uri('/usage');
-        $value = $since->format('Y-m-d\TH:i:s\Z');
-        $uri = Psr7\Uri::withQueryValue($uri, 'since', $value);
-        if ($until) {
-            $value = $until->format('Y-m-d\TH:i:s\Z');
-            $uri = Psr7\Uri::withQueryValue($uri, 'until', $value);
+    public function getUsageSummary(DateTime $start, DateTime $end)
+    {
+        $query = <<<'EOQ'
+query Usage($from: DateTime!, $to: DateTime!) {
+    admin {
+        usageSummary(from: $from, to: $to) {
+            month
+            usage
+            version {
+                env
+                secret {
+                    id
+                    name
+                    label
+                    keyring {
+                        id
+                    }
+                }
+            }
         }
-        if ($site_ids) {
-            $value = implode(',', $site_ids);
-            $uri = Psr7\Uri::withQueryValue($uri, 'site_id', $value);
-        }
-        $req = new Psr7\Request(
-            'GET',
-            $uri,
-            ['accept' => ['application/json']]
-        );
-        $resp = $this->loader->getHttpClient()->send($req);
-        return json_decode((string) $resp->getBody(), true);
+    }
+}
+EOQ;
+        $data = $this->client->query([
+            'query' => $query,
+            'variables' => [
+                'from' => $start->format(DateTime::RFC3339),
+                'to' => $end->format(DateTime::RFC3339),
+            ],
+        ]);
+        return $data['admin']['usageSummary'];
     }
 }
 

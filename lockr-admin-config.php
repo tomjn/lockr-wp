@@ -5,8 +5,7 @@
  * @package Lockr
  */
 
-use Lockr\Exception\LockrClientException;
-use Lockr\Exception\LockrServerException;
+use Lockr\Exception\LockrApiException;
 
 // Don't call the file directly and give up info!
 if ( ! function_exists( 'add_action' ) ) {
@@ -72,7 +71,7 @@ function register_lockr_settings() {
 }
 
 /**
- * Create email text field.
+ * Create token text field.
  */
 function lockr_token_text() {
 }
@@ -84,20 +83,7 @@ function lockr_advanced_text() {
 }
 
 /**
- * Create Lockr Request text field.
- */
-function lockr_request_text() {
-}
-
-/**
- * Create Lockr registration header text.
- */
-function lockr_register_text() {
-	echo "<p style='width: 80%;'>You're just one step away from secure key management! To register your site with Lockr, simply input an email address you'd like to associate your account with. If you're already a Lockr user, you can enter the email and password to login to your account and register this site. Dont' worry, we won't store your password locally.</p>";
-}
-
-/**
- * Create Lockr email text field.
+ * Create Lockr token text input.
  */
 function lockr_client_token_input() {
 
@@ -275,100 +261,47 @@ function lockr_options_validate( $input ) {
 	$op = $input['lockr_op'];
 
 	if ( 'createClient' === $op ) {
-		$dn = array(
-			'countryName'         => 'US',
-			'stateOrProvinceName' => 'Washington',
-			'localityName'        => 'Tacoma',
-			'organizationName'    => 'Lockr',
-		);
-		delete_option( 'lockr_cert' );
 
-		$site_client = lockr_site_client();
+		$client_token = sanitize_key( $input['lockr_client_token'] );
+		$partner      = lockr_get_partner();
 
-		try {
-			$result = $site_client->createCert( $dn );
-		} catch ( LockrClientException $e ) {
-			add_settings_error(
-				'lockr_options',
-				'lockr-csr',
-				'Please check form inputs.'
-			);
-			return $options;
-		} catch ( LockrServerException $e ) {
-			add_settings_error(
-				'lockr_options',
-				'lockr-csr',
-				'Lockr encountered an unexpected error'
-			);
-			return $options;
+		if ( empty( $partner ) ) {
+			$success = create_certs( $client_token );
+		} else {
+			$success = lockr_partner_register( $client_token, $partner );
 		}
 
-		$dir = ABSPATH . '.lockr/dev';
-
-		lockr_write_cert_pair( $dir, $result );
-
-		update_option( 'lockr_partner', 'custom' );
-		delete_option( 'lockr_cert' );
+		if ( $success ) {
+			update_option( 'lockr_partner', 'custom' );
+			delete_option( 'lockr_cert' );
+		} else {
+			add_settings_error(
+				'lockr_options',
+				'lockr-csr',
+				'Lockr encountered an unexpected error, please try again. If you continue to experience this error please contact Lockr support.'
+			);
+		}
 	} elseif ( 'migrate' === $op ) {
-		$cert_file = get_option( 'lockr_cert' );
-		if ( empty( $cert_file ) ) {
-			$dirname = ABSPATH . '.lockr';
-			if ( file_exists( $dirname . '/dev/pair.pem' ) ) {
-				$cert_file = $dirname . '/dev/pair.pem';
-			} else {
-				add_settings_error(
-					'lockr_options',
-					'lockr-csr',
-					'Lockr encountered an unexpected'
-				);
-				return $options;
-			}
+		$client_token = sanitize_key( $input['lockr_client_token'] );
+		$partner      = lockr_get_partner();
+
+		if ( empty( $partner ) ) {
+			$success = create_certs( $client_token );
+		} else {
+			$success = lockr_partner_register( $client_token, $partner );
 		}
 
-		$cert_info = openssl_x509_parse( file_get_contents( $cert_file ) );
-		if ( empty( $cert_info ) ) {
+		if ( $success ) {
+			update_option( 'lockr_partner', 'custom' );
+			delete_option( 'lockr_cert' );
+			update_option( 'lockr_prod_migrate', true );
+		} else {
 			add_settings_error(
 				'lockr_options',
 				'lockr-csr',
-				'Lockr encountered an unexpected'
+				'Lockr encountered an unexpected error, please try again. If you continue to experience this error please contact Lockr support.'
 			);
-			return $options;
 		}
-
-		$subject = $cert_info['subject'];
-		$dn      = array(
-			'countryName'         => $subject['C'],
-			'stateOrProvinceName' => $subject['ST'],
-			'localityName'        => $subject['L'],
-			'organizationName'    => $subject['O'],
-		);
-
-		$site_client = lockr_site_client();
-
-		try {
-			$result = $site_client->createCert( $dn );
-		} catch ( LockrClientException $e ) {
-			add_settings_error(
-				'lockr_options',
-				'lockr-csr',
-				'Please make sure that the current Lockr certificate is valid.'
-			);
-			return $options;
-		} catch ( LockrServerException $e ) {
-			add_settings_error(
-				'lockr_options',
-				'lockr-csr',
-				'Lockr encountered an unexpected'
-			);
-			return $options;
-		}
-
-		$dir = ABSPATH . '.lockr/prod';
-
-		lockr_write_cert_pair( $dir, $result );
-
-		delete_option( 'lockr_cert' );
-		update_option( 'lockr_prod_migrate', true );
 	} elseif ( 'advanced' === $op ) {
 		$cert_path = trim( $input['lockr_cert_path'] );
 
@@ -411,17 +344,8 @@ function lockr_options_validate( $input ) {
  */
 function lockr_configuration_form() {
 	require_once LOCKR__PLUGIN_DIR . '/class-lockr-status.php';
-	try {
-		$status = lockr_check_registration();
-	} catch ( LockrServerException $e ) {
 
-		?>
-		<p class='error'>The Lockr service has returned an error. Please try again.</p>
-
-		<?php
-		return;
-	}
-
+	$status      = lockr_check_registration();
 	$errors      = get_settings_errors();
 	$error_codes = array();
 	foreach ( $errors as $error ) {
@@ -435,24 +359,24 @@ function lockr_configuration_form() {
 		<?php
 
 		settings_errors();
-		$cert_valid   = $status['cert_valid'];
-		$exists       = $status['exists'];
+
+		$cert_valid   = $status['valid_cert'];
 		$partner      = lockr_get_partner();
 		$prod_migrate = get_option( 'lockr_prod_migrate', false );
 
 		if ( null === $partner ) {
 			if ( file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
-				$force_prod    = true;
-				$partner_certs = false;
+				$migrate_possible   = false;
+				$partner_certs      = false;
 			} else {
-				$force_prod    = false;
-				$partner_certs = false;
+				$migrate_possible    = true;
+				$partner_certs       = false;
 			}
 		}
 
 		if ( $partner ) {
-			$force_prod    = $partner['force_prod'];
-			$partner_certs = $partner['partner_certs'];
+			$migrate_possible = ! $partner['force_prod'];
+			$partner_certs    = $partner['partner_certs'];
 		}
 
 		if ( $partner ) {
@@ -463,12 +387,12 @@ function lockr_configuration_form() {
 			<?php
 
 		}
-		if ( $exists ) {
+		if ( $cert_valid ) {
 
 			?>
 			<p>
 			All systems are go!
-			Your site is registered, your certificate is valid, and everything seems
+			Your site is connected to a KeyRing, your certificate is valid, and everything seems
 			good on our end.
 			To make things simple we've laid out a few key elements (pun intended)
 			that the system requires in order to run.
@@ -477,7 +401,7 @@ function lockr_configuration_form() {
 			channel and we'd be happy to help.
 			Happy Keying!
 			</p>
-
+			<h2>Status Table</h2>
 			<?php
 		} else {
 			?>
@@ -522,13 +446,15 @@ function lockr_configuration_form() {
 				value="createClient" />
 			<?php submit_button( 'Create KeyRing Client' ); ?>
 			<?php
-		} elseif ( 'dev' === $status['info']['env'] && $exists && ! $force_prod && ! $partner_certs && ! $prod_migrate ) {
+		} elseif ( 'dev' === $status['environment'] && $migrate_possible && ! $partner_certs && ! $prod_migrate ) {
 			?>
 			<p>
 			Click the button below to deploy this site to production.
 			This should only be done in your production environment as it writes
 			a new certificate to the file system.
 			</p>
+			<button type="button" id="token-button" class="button button-primary">Migrate to Production</button>
+			<?php do_settings_fields( 'lockr', 'lockr_token' ); ?>
 			<input id="lockr_op"
 				name="lockr_options[lockr_op]"
 				type="hidden"

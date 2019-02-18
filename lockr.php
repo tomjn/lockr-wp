@@ -39,13 +39,10 @@ register_activation_hook( __FILE__, 'lockr_install' );
  * @file
  */
 
-use Lockr\Exception\LockrException;
-use Lockr\Exception\LockrClientException;
-use Lockr\KeyClient;
+use Lockr\Exception\LockrApiException;
 use Lockr\Lockr;
-use Lockr\NullPartner;
-use Lockr\Partner;
-use Lockr\SiteClient;
+use Lockr\LockrClient;
+use Lockr\LockrSettings;
 use Defuse\Crypto\Crypto;
 use Defuse\Crypto\Key;
 use Defuse\Crypto\Encoding;
@@ -54,7 +51,7 @@ use Defuse\Crypto\Exception as Ex;
 /**
  * Include our autoloader.
  */
-require_once LOCKR__PLUGIN_DIR . '/lockr-autoload.php';
+require_once LOCKR__PLUGIN_DIR . '/vendor/autoload.php';
 
 /**
  * Include our partners.
@@ -70,6 +67,11 @@ require_once LOCKR__PLUGIN_DIR . '/lockr-overrides.php';
  * Include our post encryption filters.
  */
 require_once LOCKR__PLUGIN_DIR . '/lockr-secure-posts.php';
+
+/**
+ * Include our secret info parser.
+ */
+require_once LOCKR__PLUGIN_DIR . '/class-lockr-wp-secret-info.php';
 
 /**
  * Include our WP CLI Commands if available.
@@ -132,7 +134,6 @@ function lockr_install() {
 		add_option( 'lockr_partner', $partner['name'] );
 	}
 
-	// lockr_auto_register( $partner );
 }
 
 /**
@@ -166,6 +167,8 @@ function lockr_write_cert_pair( $dir, $texts ) {
 	fwrite( $pair_fd, $texts['cert_text'] );
 	fclose( $pair_fd );
 	chmod( $pair_file, 0600 );
+
+	return file_exists( $pair_file );
 }
 
 /**
@@ -180,99 +183,52 @@ function lockr_update_db_check() {
 add_action( 'plugins_loaded', 'lockr_update_db_check' );
 
 /**
- * Returns the Lockr site client.
- */
-function lockr_site_client() {
-	$base_client = lockr_client();
-
-	if ( false === $base_client ) {
-		return false;
-	}
-
-	$client = new SiteClient( $base_client );
-
-	return $client;
-}
-
-/**
- * Returns the Lockr key client.
- */
-function lockr_key_client() {
-	$base_client = lockr_client();
-
-	if ( false === $base_client ) {
-		return false;
-	}
-
-	$client = new KeyClient( $base_client );
-
-	return $client;
-}
-
-/**
  * Returns the Lockr client for this site.
+ *
+ * @param bool $force If the cached client (if exists) should be recreated.
  */
-function lockr_client() {
+function lockr_client( $force = false ) {
 	static $client;
-
-	if ( ! isset( $client ) ) {
-		$client = Lockr::create( lockr_partner() );
+	if ( ! $client || $force ) {
+		$settings = lockr_settings();
+		$client   = LockrClient::createFromSettings( $settings );
 	}
-
-	return $client;
+	$secret_info = new Lockr_WP_Secret_Info();
+	return new Lockr( $client, $secret_info );
 }
 
 /**
- * Returns the current partner for this site.
+ * Returns the Lockr settings for this site.
  */
-function lockr_partner() {
-	$region = get_option( 'lockr_region', 'us' );
+function lockr_settings() {
 
 	if ( get_option( 'lockr_cert', false ) ) {
+		$cert_path = get_option( 'lockr_cert', null );
+	} else {
+		$partner = lockr_get_partner();
+		if ( ! $partner ) {
+			// User is not on any detected partner or custom certificate location.
+			$dirname   = ABSPATH . '.lockr';
+			$cert_path = null;
 
-		$partner = get_option( 'lockr_partner', null );
-
-		if ( 'custom' === $partner ) {
-			$cert_path = get_option( 'lockr_cert' );
-			if ( $cert_path ) {
-				return new Partner( $cert_path, 'custom', $region );
+			if ( file_exists( $dirname . '/prod/pair.pem' ) ) {
+				$cert_path = $dirname . '/prod/pair.pem';
+			} elseif ( file_exists( $dirname . '/dev/pair.pem' ) ) {
+				$cert_path = $dirname . '/dev/pair.pem';
+			} else {
+				$cert_path = null;
 			}
-
-			return new NullPartner( $region );
-		}
-	}
-
-	$detected_partner = lockr_get_partner();
-	if ( ! $detected_partner ) {
-		// User is not on any detected partner or custom certificate location.
-		$dirname   = ABSPATH . '.lockr';
-		$cert_path = null;
-
-		if ( file_exists( $dirname . '/prod/pair.pem' ) ) {
-			$cert_path = $dirname . '/prod/pair.pem';
-		} elseif ( file_exists( $dirname . '/dev/pair.pem' ) ) {
-			$cert_path = $dirname . '/dev/pair.pem';
-		}
-
-		if ( $cert_path ) {
-			return new Partner( $cert_path, 'custom', $region );
 		} else {
-			return new NullPartner( $region );
+			$cert_path = isset( $partner['cert'] ) ? $partner['cert'] : null;
 		}
 	}
-
-	return new Partner(
-		$detected_partner['cert'],
-		$detected_partner['name'],
-		$region
-	);
+	return new LockrSettings( $cert_path );
 }
 
 /**
  * Returns if this site is currently registered with Lockr.
  *
- * @return bool
- * true if this site is registered, false if not.
+ * @return array An array of the site status.
  */
 function lockr_check_registration() {
 
@@ -282,35 +238,83 @@ function lockr_check_registration() {
 		return $status;
 	}
 	$status = array(
-		'cert_valid' => false,
-		'exists'     => false,
-		'available'  => false,
-		'has_cc'     => false,
-		'info'       => array( 'partner' => null ),
+		'valid_cert'    => false,
+		'environment'   => false,
+		'client_label'  => null,
+		'keyring_label' => null,
+		'has_cc'        => false,
+		'trial_end'     => null,
+		'partner'       => array(),
 	);
 
-	$client = lockr_site_client();
+	$client = lockr_client();
 
 	try {
-		if ( $client ) {
-			$status = $client->exists();
+			$client_info = $client->getInfo();
+			$partner     = lockr_get_partner();
 
-			$partner           = lockr_get_partner();
-			$status['partner'] = $partner;
-
-			// lockr_auto_register( $partner, $status['info']['env'] );
-		}
-	} catch ( LockrClientException $e ) {
-		$status = array(
-			'cert_valid' => false,
-			'exists'     => false,
-			'available'  => false,
-			'has_cc'     => false,
-			'info'       => array( 'partner' => null ),
-		);
+			$status['valid_cert']    = true;
+			$status['partner']       = $partner;
+			$status['environment']   = $client_info['env'];
+			$status['client_label']  = $client_info['label'];
+			$status['keyring_label'] = $client_info['keyring']['label'];
+			$status['keyring_id']    = $client_info['keyring']['id'];
+			$status['has_cc']        = $client_info['keyring']['has_cc'];
+			$status['trial_end']     = $client_info['keyring']['trialEnd'];
+	} catch ( \Exception $e ) {
+		return $status;
 	}
 
 	return $status;
+}
+
+/**
+ * Create Lockr client certs.
+ *
+ * @param string $client_token The client token passed back from accounts.lockr.io .
+ * @param array  $dn The dn array for the CSR.
+ * @param string $dirname The directory to put the certificates in.
+ * @param array  $partner The partner information if it exists.
+ *
+ * @return bool If the certs were successfully created.
+ */
+function create_certs( $client_token, $dn = array(), $dirname = ABSPATH . '.lockr', $partner = array() ) {
+
+	if ( empty( $dn ) ) {
+		$dn = array(
+			'countryName'         => 'US',
+			'stateOrProvinceName' => 'Washington',
+			'localityName'        => 'Tacoma',
+			'organizationName'    => 'Lockr',
+		);
+	}
+
+	if ( ! isset( $partner['name'] ) ) {
+
+		$client = lockr_client( true );
+
+		try {
+			$result = $client->createCertClient( $client_token, $dn );
+		} catch ( \Exception $e ) {
+			return false;
+		}
+
+		if ( ! empty( $result['cert_text'] ) ) {
+			$env = $result['env'];
+			return lockr_write_cert_pair( $dirname . '/' . $env, $result );
+		}
+	} else {
+		$partner_name = $partner['name'];
+		if ( 'pantheon' === $partner_name ) {
+			$client = lockr_client( true );
+			try {
+				$result = $client->createPantheonClient( $client_token );
+			} catch ( \Exception $e ) {
+				return false;
+			}
+			return true;
+		}
+	}
 }
 
 /**
@@ -479,14 +483,12 @@ function lockr_get_key( $key_name ) {
 		return false;
 	}
 
-	$encoded = $key_store[0]->key_value;
 	$auto_created = $key_store[0]->auto_created;
-	$client  = lockr_key_client();
+	$client  = lockr_client();
 
 	try {
 		if ( $client ) {
-			$key_value = $client->encrypted( $encoded )->get( $key_name );
-			return $key_value;
+			return $client->getSecretValue( $key_name ) ?: false;
 		} else {
 			return false;
 		}
@@ -521,61 +523,42 @@ function lockr_get_key( $key_name ) {
  */
 function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null, $auto_created = false ) {
 	global $wpdb;
-	$table_name   = $wpdb->prefix . 'lockr_keys';
-	$key_abstract = '**************' . substr( $key_value, -4 );
-	$key_exists   = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $key_name ) ) ); // WPCS: unprepared SQL OK.
-	if ( empty( $key_exists ) ) {
-		$key_exists = null;
-		$encoded    = null;
-	} else {
-		$encoded = $key_exists[0]->key_value;
-	}
 
-	$client = lockr_key_client();
+	$client = lockr_client();
 
 	if ( false === $client ) {
 		return false;
 	}
-	$client = $client->encrypted();
 
 	try {
-		$key_remote = $client->set( $key_name, $key_value, $key_label, $encoded );
-	} catch ( LockrClientException $e ) {
-
-		if ( 'Not Paid' === $e->title ) {
-			return 'NOTE: Key was not set. Please go to <a href="https://lockr.io/">Lockr</a> and add a payment method to your account.';
-		}
+		$key_remote = $client->createSecretValue( $key_name, $key_value, $key_label ) ?: false;
 	} catch ( \Exception $e ) {
 		return false;
 	}
 
 	if ( false !== $key_remote ) {
-		// Setup our storage array.
-		$key_data = array(
-			'time'            => date( 'Y-m-d H:i:s' ),
-			'key_name'        => $key_name,
-			'key_label'       => $key_label,
-			'key_value'       => $key_remote,
-			'option_override' => $option_override,
-			'auto_created'    => $auto_created,
-		);
-
-		$status = lockr_check_registration();
+		$existing_key = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $name ) ) ); // WPCS: unprepared SQL OK.
+		$key_id       = isset( $existing_key[0]->id ) ? array( 'id' => $existing_key[0]->id ) : null;
+		if ( $key_id ) {
+			// Setup our storage array.
+			$key_data     = array(
+				'key_name'        => $key_name,
+				'key_label'       => $key_label,
+				'key_abstract'    => $key_abstract,
+				'option_override' => $option_override,
+				'auto_created'    => $auto_created,
+			);
+			$status = lockr_check_registration();
 
 		if ( isset( $status['info']['env'] ) && 'prod' !== $status['info']['env'] ) {
 			$key_data['dev_abstract'] = $key_abstract;
 		} else {
 			$key_data['key_abstract'] = $key_abstract;
 		}
-
-		if ( ! empty( $key_exists ) ) {
-			$key_id    = array( 'id' => $key_exists[0]->id );
-			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
-		} else {
-			$key_store = $wpdb->insert( $table_name, $key_data );
+			$table_name   = $wpdb->prefix . 'lockr_keys';
+			$key_store    = $wpdb->update( $table_name, $key_data, $key_id );
+			return $key_store;
 		}
-
-		return $key_store;
 	}
 
 	return false;
@@ -587,19 +570,21 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
  * @param string $key_name The key name.
  */
 function lockr_delete_key( $key_name ) {
+	// TODO: UPDATE FOR NEW LIBRARY
 	$key_value = lockr_get_key( $key_name );
 
-	$client = lockr_key_client();
+	$client = lockr_client();
 	if ( $client ) {
-		global $wpdb;
-		global $lockr_all_keys;
-		$table_name = $wpdb->prefix . 'lockr_keys';
 
 		try {
 			$client->delete( $key_name );
-		} catch ( LockrException $e ) {
+		} catch ( \Exception $e ) {
 			return false;
 		}
+
+		global $wpdb;
+		global $lockr_all_keys;
+		$table_name = $wpdb->prefix . 'lockr_keys';
 
 		if ( isset( $lockr_all_keys[ $key_name ] ) ) {
 			$key = $lockr_all_keys[ $key_name ];

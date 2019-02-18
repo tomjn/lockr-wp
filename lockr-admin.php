@@ -50,21 +50,22 @@ function lockr_admin_styles( $hook ) {
 	if ( 'lockr' === substr( $hook, 0, 5 ) ) {
 		wp_enqueue_style( 'lockrStylesheet', plugins_url( 'css/lockr.css', __FILE__ ), array(), '2.4', 'all' );
 		wp_enqueue_script( 'lockrScript', plugins_url( 'js/lockr.js', __FILE__ ), array(), '2.4', true );
+		$status           = lockr_check_registration();
+		$site_information = array(
+			'name'       => get_option( 'blogname' ),
+			'force_prod' => isset( $status['partner']['force_prod'] ) ? $status['partner']['force_prod'] : false,
+			'keyring_id' => isset( $status['keyring_id'] ) ? $status['keyring_id'] : false,
+		);
+		wp_localize_script( 'lockrScript', 'lockr_settings', $site_information );
 	} elseif ( 'post' === substr( $hook, 0, 4 ) ) {
 		wp_enqueue_script( 'lockrScript', plugins_url( 'js/lockr-post.js', __FILE__ ), array(), '2.4', true );
 	}
-
-	$site_information = array(
-		'name' => get_option( 'blogname' ),
-	);
-	wp_localize_script( 'lockrScript', 'lockr_settings', $site_information );
 
 }
 add_action( 'admin_enqueue_scripts', 'lockr_admin_styles' );
 
 if ( ! get_option( 'lockr_partner' ) ) {
 	$partner = lockr_get_partner();
-
 	if ( $partner ) {
 		add_option( 'lockr_partner', $partner['name'] );
 	}

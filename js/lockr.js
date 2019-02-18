@@ -64,11 +64,17 @@ jQuery( function ( $ ) {
 	});
 
 	$('#client-token #token-button').click(function () {
-		var url = 'https://lockraccountsd7.lndo.site/register-site';
-		 if (lockr_settings.name) {
-				var site_name = encodeURIComponent(lockr_settings.name).replace(/%20/g, '+');
-				url += '?site_label=' + site_name;
+		if( lockr_settings.keyring_id ) {
+			var url = 'https://accounts.lockr.io/move-to-prod?lockr_keyring=' + lockr_settings.keyring_id;
+		} else {
+			var url = 'https://accounts.lockr.io/register-keyring';
+			var site_name = encodeURIComponent(lockr_settings.name).replace(/%20/g, '+');
+			url += '?keyring_label=' + site_name;
+			if (lockr_settings.force_prod) {
+				url += '&force_prod=true';
+			}
 		}
+
 		var popup = window.open(url, 'LockrRegister', 'toolbar=off,height=850,width=650');
 		window.addEventListener('message', function (e) {
 				var client_token = e.data.client_token;

@@ -71,9 +71,8 @@ class Lockr_Status extends WP_List_Table {
 	public function prepare_items() {
 		$status = lockr_check_registration();
 
-		$cert_valid = $status['cert_valid'];
-		$exists     = $status['exists'];
-		$created    = isset( $status['created'] ) ? $status['created'] : false;
+		$cert_valid = $status['valid_cert'];
+		$exists     = $status['keyring_label'] ? true : false;
 
 		$items = array();
 
@@ -90,15 +89,15 @@ EOL;
 			);
 			$items[] = array(
 				'title'    => 'Environment',
-				'value'    => $status['info']['env'],
+				'value'    => ucfirst( $status['environment'] ),
 				'severity' => 'lockr-info',
 			);
 		} else {
 			$text    = <<<EOL
 Oops!
 Looks like we need to know who you are before we give you the keys to the castle.
-Your certificate is not valid, please register for one.
-If you've already gotten a certificate, we are unable to find it.
+You have not connected this site to a KeyRing on Lockr, please follow the steps below to complete setup.
+If you've already created a certificate, we are unable to find it.
 Please check the advanced settings to ensure your path is correct
 (or if you're on a hosting partner contact their support).
 EOL;
@@ -111,74 +110,58 @@ EOL;
 		}
 
 		if ( $exists ) {
-			$text    = <<<EOL
-You're one of the family.
-We've got your site registered and you're all good to go!
-EOL;
 			$items[] = array(
-				'title'       => 'Site Registered',
+				'title'       => 'Connected KeyRing',
 				'value'       => 'Yes',
-				'description' => $text,
+				'description' => 'You are currently connected to the ' . $status['keyring_label'] . ' KeyRing.',
 				'severity'    => 'lockr-ok',
 			);
-		} else {
 
-			$text    = <<<EOL
-Who are you again?
-We don't have your site registered with Lockr.
-Please use the form below to register your site.
-EOL;
-			$items[] = array(
-				'title'       => 'Site Registered',
-				'value'       => 'No',
-				'description' => $text,
-				'severity'    => 'lockr-error',
-			);
-		}
-
-		if ( $cert_valid ) {
 			$has_cc = $status['has_cc'];
 
-			if ( $created ) {
-				$expires = ( new \DateTime() )
-					->setTimestamp( $created )
-					->add( new \DateInterval( 'P14D' ) );
-				if ( $expires > ( new \DateTime() ) ) {
-					$items[] = array(
-						'title'    => 'Trial Expiration Date',
-						'value'    => $expires->format( 'M jS, Y' ),
-						'severity' => 'lockr_ok',
-					);
-				} elseif ( ! $has_cc ) {
-					$items[] = array(
-						'title'    => 'Trial Expiration Date',
-						'value'    => $expires->format( 'M jS, Y' ),
-						'severity' => 'lockr_error',
-					);
-				}
+			$expires = \DateTime::createFromFormat( \DateTime::RFC3339, $status['trial_end'] );
+
+			if ( $expires > ( new \DateTime() ) ) {
+				$items[] = array(
+					'title'    => 'Trial Expiration Date',
+					'value'    => $expires->format( 'M jS, Y' ),
+					'severity' => 'lockr-ok',
+				);
+			} elseif ( ! $has_cc ) {
+				$items[] = array(
+					'title'    => 'Trial Expiration Date',
+					'value'    => $expires->format( 'M jS, Y' ),
+					'severity' => 'lockr-error',
+				);
 			}
 
-			$partner        = $status['info']['partner'];
-			$is_custom      = in_array( $partner, array( 'custom', 'lockr' ) );
+			$partner        = isset( $status['partner']['name'] ) ? $status['partner']['name'] : 'custom';
+			$is_custom      = in_array( $partner, array( 'custom', 'lockr' ), true );
 			$default        = $is_custom ? 'lockr-error' : 'lockr-warning';
-			$is_custom_text = <<<EOL
-Uh oh!
-Without a credit card we cannot issue a production certificate.
-Please add one before migrating to production.
-EOL;
+			$is_custom_text = 'Uh oh! Without a credit card we cannot issue a production certificate. Please add one before migrating to production.';
 
-			$is_not_custom_text  = "Since you're on a partnering host, a credit card is not necessary to move to production. However, please make sure you get a card on file ASAP. We will contact you if there is no card on file within 30 days of moving to production use.";
+			$is_not_custom_text  = "Since you're hosting with " . $partner . ', a credit card is not necessary to move to production. However, please make sure you get a card on file ASAP. We will contact you if there is no card on file within 30 days of moving to production use.';
 			$default_description = $is_custom ? $is_custom_text : $is_not_custom_text;
-			$has_cc_text         = <<<EOL
-We've got your credit card safely on file and you'll be receiving regular
-invoice for your key usage.
-EOL;
+			$has_cc_text         = "We've got your credit card safely on file and you'll be receiving regular invoices.";
 
 			$items[] = array(
 				'title'       => 'Credit Card on File',
 				'value'       => $has_cc ? 'Yes' : 'No',
 				'description' => $has_cc ? $has_cc_text : $default_description,
 				'severity'    => $has_cc ? 'lockr-ok' : $default,
+			);
+		} else {
+
+			$text    = <<<EOL
+Who are you again?
+We don't have your site connected to a KeyRing on Lockr.
+Please use the form below to connect your site and create a certificate.
+EOL;
+			$items[] = array(
+				'title'       => 'Connected KeyRing',
+				'value'       => 'No',
+				'description' => $text,
+				'severity'    => 'lockr-error',
 			);
 		}
 
