@@ -259,7 +259,7 @@ function lockr_check_registration() {
 			$status['client_label']  = $client_info['label'];
 			$status['keyring_label'] = $client_info['keyring']['label'];
 			$status['keyring_id']    = $client_info['keyring']['id'];
-			$status['has_cc']        = $client_info['keyring']['has_cc'];
+			$status['has_cc']        = $client_info['keyring']['hasCreditCard'];
 			$status['trial_end']     = $client_info['keyring']['trialEnd'];
 	} catch ( \Exception $e ) {
 		return $status;
@@ -483,8 +483,7 @@ function lockr_get_key( $key_name ) {
 		return false;
 	}
 
-	$auto_created = $key_store[0]->auto_created;
-	$client  = lockr_client();
+	$client = lockr_client();
 
 	try {
 		if ( $client ) {
@@ -492,21 +491,21 @@ function lockr_get_key( $key_name ) {
 		} else {
 			return false;
 		}
-	} catch ( LockrClientException $e ) {
+	} catch ( \Exception $e ) {
 		// if 404 do the following.
 		if ( 404 === $e->getCode() ) {
-			if ( ! $key_value && $auto_created ) {
+			$auto_created = $key_store[0]->auto_created;
+			if ( $auto_created ) {
 				$status = lockr_check_registration();
-				if ( isset( $status['info']['env'] ) ) {
-
-					$key_value = base64_encode( $client->create( 256 ) );
-					$key_set   = lockr_set_key( $key_name, $key_value, $key_store[0]->key_label, null, true );
+				if ( isset( $status['environment'] ) ) {
+					$key_value = base64_encode( $client->generateKey( 256 ) );
+					$key_set   = lockr_set_key( $key_name, $key_value, $key_store[0]->key_label, $key_store[0]->option_override, true );
 					return $key_value;
 				}
 			}
+		} else {
+			return false;
 		}
-	} catch ( \Exception $e ) {
-		return false;
 	}
 }
 
@@ -519,10 +518,9 @@ function lockr_get_key( $key_name ) {
  * @param string|bool $option_override The exisiting key metadata if it exists.
  * @param bool        $auto_created if the key was programatically created by Lockr.
  *
- * @return bool true if they key set successfully, false if not.
+ * @return bool       true if the key set successfully, false if not.
  */
 function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null, $auto_created = false ) {
-	global $wpdb;
 
 	$client = lockr_client();
 
@@ -537,26 +535,35 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
 	}
 
 	if ( false !== $key_remote ) {
-		$existing_key = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $name ) ) ); // WPCS: unprepared SQL OK.
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'lockr_keys';
+		$existing_key = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $key_name ) ) ); // WPCS: unprepared SQL OK.
 		$key_id       = isset( $existing_key[0]->id ) ? array( 'id' => $existing_key[0]->id ) : null;
 		if ( $key_id ) {
+			$key_abstract = '**************' . substr( $key_value, -4 );
 			// Setup our storage array.
-			$key_data     = array(
-				'key_name'        => $key_name,
-				'key_label'       => $key_label,
-				'key_abstract'    => $key_abstract,
-				'option_override' => $option_override,
-				'auto_created'    => $auto_created,
+			$key_data = array(
+				'key_name'  => $key_name,
+				'key_label' => $key_label,
 			);
+
+			if ( null !== $option_override && $option_override !== $existing_key[0]->option_override ) {
+				$key_data['option_override'] = $option_override;
+			}
+
+			if ( ! $existing_key[0]->auto_created && $auto_created !== $existing_key[0]->auto_created ) {
+				$key_data['auto_created'] = $auto_created;
+			}
+
 			$status = lockr_check_registration();
 
-		if ( isset( $status['info']['env'] ) && 'prod' !== $status['info']['env'] ) {
-			$key_data['dev_abstract'] = $key_abstract;
-		} else {
-			$key_data['key_abstract'] = $key_abstract;
-		}
-			$table_name   = $wpdb->prefix . 'lockr_keys';
-			$key_store    = $wpdb->update( $table_name, $key_data, $key_id );
+			if ( isset( $status['environment'] ) && 'prod' !== $status['environment'] ) {
+				$key_data['dev_abstract'] = $key_abstract;
+			} else {
+				$key_data['key_abstract'] = $key_abstract;
+			}
+
+			$key_store  = $wpdb->update( $table_name, $key_data, $key_id );
 			return $key_store;
 		}
 	}
@@ -570,7 +577,7 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
  * @param string $key_name The key name.
  */
 function lockr_delete_key( $key_name ) {
-	// TODO: UPDATE FOR NEW LIBRARY
+	// TODO: UPDATE FOR NEW LIBRARY!
 	$key_value = lockr_get_key( $key_name );
 
 	$client = lockr_client();
@@ -619,6 +626,37 @@ function lockr_delete_key( $key_name ) {
 			return true;
 		}
 	}
+}
+
+/**
+ * Migrate the abstracts into their correct environment display.
+ *
+ * @param string $environment What environment the site is in.
+ */
+function lockr_update_abstracts( $environment ) {
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'lockr_keys';
+	$query      = "SELECT * FROM $table_name";
+	$keys       = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
+
+	foreach ( $keys as $key ) {
+		$key_value = lockr_get_key( $key->key_name );
+
+		if ( $key_value ) {
+			$key_abstract = '**************' . substr( $key_value, -4 );
+			$key_id       = array( 'id' => $key->id );
+
+			if ( 'prod' !== $environment ) {
+				$key_data = array( 'dev_abstract' => $key_abstract );
+			} else {
+				$key_data = array( 'key_abstract' => $key_abstract );
+			}
+
+			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
+		}
+	}
+	update_option( 'lockr_' . $environment . '_abstract_migrated', true );
 }
 
 /**

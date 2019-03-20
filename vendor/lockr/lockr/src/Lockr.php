@@ -52,7 +52,6 @@ class Lockr
         $query = <<<'EOQ'
 mutation CreateCertClient($input: CreateCertClient!) {
   createCertClient(input: $input) {
-    env
     auth {
       ... on LockrCert {
         certText
@@ -73,7 +72,6 @@ EOQ;
         return [
             'key_text' => $key_text,
             'cert_text' => $data['createCertClient']['auth']['certText'],
-            'env' => $data['createCertClient']['env'],
         ];
     }
 
@@ -94,6 +92,16 @@ EOQ;
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Whether the request will have a client cert attached.
+     *
+     * @return bool
+     */
+    public function hasCert()
+    {
+        return $this->client->hasCert();
     }
 
     /**
@@ -127,10 +135,11 @@ EOQ;
      * @param string $name
      * @param string $value
      * @param string|null $label
+     * @param string|null $sovereignty
      *
      * @return string
      */
-    public function createSecretValue($name, $value, $label = null)
+    public function createSecretValue($name, $value, $label = null, $sovereignty = null)
     {
         $info = $this->info->getSecretInfo($name);
         if (isset($info['wrapping_key'])) {
@@ -150,14 +159,18 @@ EOQ;
         if (is_null($label)) {
             $label = '';
         }
+        $input = [
+            'name' => $name,
+            'label' => $label,
+            'value' => base64_encode($value),
+        ];
+        if (!is_null($sovereignty)) {
+            $input['sovereignty'] = $sovereignty;
+        }
         $data = $this->client->query([
             'query' => $query,
             'variables' => [
-                'input' => [
-                    'name' => $name,
-                    'label' => $label,
-                    'value' => base64_encode($value),
-                ],
+                'input' => $input,
             ],
         ]);
         $this->info->setSecretInfo($name, $info);
@@ -201,6 +214,52 @@ EOQ;
             $value = MultiKeyWrapper::decrypt($value, $wk);
         }
         return $value;
+    }
+
+    /**
+     * Deletes versions of a key in this client's environment.
+     *
+     * @param string $name
+     */
+    public function deleteSecretValue($name)
+    {
+        $query = <<<'EOQ'
+mutation Delete($input: DeleteClientVersions!) {
+    deleteClientVersions(input: $input)
+}
+EOQ;
+        $this->client->query([
+            'query' => $query,
+            'variables' => [
+                'input' => [
+                    'secretName' => $name,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Generates a new random key.
+     *
+     * @param int $size
+     *
+     * @return string
+     */
+    public function generateKey($size = 256)
+    {
+        $query = <<<'EOQ'
+query RandomKey($size: KeySize) {
+    randomKey(size: $size)
+}
+EOQ;
+        if ($size !== 256 && $size !== 192 && $size !== 128) {
+            throw new \Exception("Invalid key size: {$size}");
+        }
+        $data = $this->client->query([
+            'query' => $query,
+            'variables' => ['size' => "AES{$size}"],
+        ]);
+        return base64_decode($data['randomKey']);
     }
 
     /**

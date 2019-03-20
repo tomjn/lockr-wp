@@ -62,7 +62,7 @@ class ComposerStaticInit1f2517e7aba32ee4945863e3e1c79004
         ),
         'Lockr\\' => 
         array (
-            0 => __DIR__ . '/..' . '/lockr/lockr-client/src',
+            0 => __DIR__ . '/..' . '/lockr/lockr/src',
         ),
         'GuzzleHttp\\Psr7\\' => 
         array (

@@ -443,67 +443,6 @@
         ]
     },
     {
-        "name": "symfony/yaml",
-        "version": "v3.4.21",
-        "version_normalized": "3.4.21.0",
-        "source": {
-            "type": "git",
-            "url": "https://github.com/symfony/yaml.git",
-            "reference": "554a59a1ccbaac238a89b19c8e551a556fd0e2ea"
-        },
-        "dist": {
-            "type": "zip",
-            "url": "https://api.github.com/repos/symfony/yaml/zipball/554a59a1ccbaac238a89b19c8e551a556fd0e2ea",
-            "reference": "554a59a1ccbaac238a89b19c8e551a556fd0e2ea",
-            "shasum": ""
-        },
-        "require": {
-            "php": "^5.5.9|>=7.0.8",
-            "symfony/polyfill-ctype": "~1.8"
-        },
-        "conflict": {
-            "symfony/console": "<3.4"
-        },
-        "require-dev": {
-            "symfony/console": "~3.4|~4.0"
-        },
-        "suggest": {
-            "symfony/console": "For validating YAML files using the lint command"
-        },
-        "time": "2019-01-01T13:45:19+00:00",
-        "type": "library",
-        "extra": {
-            "branch-alias": {
-                "dev-master": "3.4-dev"
-            }
-        },
-        "installation-source": "dist",
-        "autoload": {
-            "psr-4": {
-                "Symfony\\Component\\Yaml\\": ""
-            },
-            "exclude-from-classmap": [
-                "/Tests/"
-            ]
-        },
-        "notification-url": "https://packagist.org/downloads/",
-        "license": [
-            "MIT"
-        ],
-        "authors": [
-            {
-                "name": "Fabien Potencier",
-                "email": "fabien@symfony.com"
-            },
-            {
-                "name": "Symfony Community",
-                "homepage": "https://symfony.com/contributors"
-            }
-        ],
-        "description": "Symfony Yaml Component",
-        "homepage": "https://symfony.com"
-    },
-    {
         "name": "psr/log",
         "version": "1.1.0",
         "version_normalized": "1.1.0.0",
@@ -618,18 +557,79 @@
         ]
     },
     {
-        "name": "lockr/lockr-client",
-        "version": "v2.x-dev",
-        "version_normalized": "2.9999999.9999999.9999999-dev",
+        "name": "symfony/yaml",
+        "version": "v3.4.22",
+        "version_normalized": "3.4.22.0",
         "source": {
             "type": "git",
-            "url": "https://github.com/lockr/lockr-client.git",
-            "reference": "e76a9d56b7bd21cb09633740111181ad41be442a"
+            "url": "https://github.com/symfony/yaml.git",
+            "reference": "ba11776e9e6c15ad5759a07bffb15899bac75c2d"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/lockr/lockr-client/zipball/e76a9d56b7bd21cb09633740111181ad41be442a",
-            "reference": "e76a9d56b7bd21cb09633740111181ad41be442a",
+            "url": "https://api.github.com/repos/symfony/yaml/zipball/ba11776e9e6c15ad5759a07bffb15899bac75c2d",
+            "reference": "ba11776e9e6c15ad5759a07bffb15899bac75c2d",
+            "shasum": ""
+        },
+        "require": {
+            "php": "^5.5.9|>=7.0.8",
+            "symfony/polyfill-ctype": "~1.8"
+        },
+        "conflict": {
+            "symfony/console": "<3.4"
+        },
+        "require-dev": {
+            "symfony/console": "~3.4|~4.0"
+        },
+        "suggest": {
+            "symfony/console": "For validating YAML files using the lint command"
+        },
+        "time": "2019-01-16T10:59:17+00:00",
+        "type": "library",
+        "extra": {
+            "branch-alias": {
+                "dev-master": "3.4-dev"
+            }
+        },
+        "installation-source": "dist",
+        "autoload": {
+            "psr-4": {
+                "Symfony\\Component\\Yaml\\": ""
+            },
+            "exclude-from-classmap": [
+                "/Tests/"
+            ]
+        },
+        "notification-url": "https://packagist.org/downloads/",
+        "license": [
+            "MIT"
+        ],
+        "authors": [
+            {
+                "name": "Fabien Potencier",
+                "email": "fabien@symfony.com"
+            },
+            {
+                "name": "Symfony Community",
+                "homepage": "https://symfony.com/contributors"
+            }
+        ],
+        "description": "Symfony Yaml Component",
+        "homepage": "https://symfony.com"
+    },
+    {
+        "name": "lockr/lockr",
+        "version": "dev-master",
+        "version_normalized": "9999999-dev",
+        "source": {
+            "type": "git",
+            "url": "https://github.com/lockr/lockr-php.git",
+            "reference": "65bc6a77da95822437e49806c1f1646cef5621a6"
+        },
+        "dist": {
+            "type": "zip",
+            "url": "https://api.github.com/repos/lockr/lockr-php/zipball/65bc6a77da95822437e49806c1f1646cef5621a6",
+            "reference": "65bc6a77da95822437e49806c1f1646cef5621a6",
             "shasum": ""
         },
         "require": {
@@ -645,7 +645,7 @@
             "phpunit/phpunit": "^7.3.5",
             "squizlabs/php_codesniffer": "^3.3.1"
         },
-        "time": "2019-01-28T19:50:30+00:00",
+        "time": "2019-02-18T23:19:34+00:00",
         "type": "library",
         "installation-source": "source",
         "autoload": {

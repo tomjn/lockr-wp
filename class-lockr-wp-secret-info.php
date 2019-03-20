@@ -25,9 +25,13 @@ class Lockr_WP_Secret_Info implements SecretInfoInterface {
 	public function __construct() {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'lockr_keys';
-		$query      = "SELECT `key_name`, `key_value` * FROM $table_name ";
-		$keys       = $wpdb->query( $query ); // WPCS: unprepared SQL OK.
-		$this->data = $keys ?: [];
+		$query      = "SELECT `key_name`, `key_value` FROM $table_name ";
+		$return     = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
+		$keys       = array();
+		foreach ( $return as $key ) {
+			$keys[ $key->key_name ] = $key->key_value;
+		}
+		$this->data = $keys;
 	}
 
 	/**
@@ -67,10 +71,11 @@ class Lockr_WP_Secret_Info implements SecretInfoInterface {
 				'key_name'        => $name,
 				'key_label'       => '',
 				'key_abstract'    => '',
-				'option_override' => '',
+				'option_override' => null,
 				'key_value'       => wp_json_encode( $info ),
+				'auto_created'    => false,
 			);
-			$key_store = $wpdp->insert( $table_name, $key_data );
+			$key_store = $wpdb->insert( $table_name, $key_data );
 		}
 
 		if ( ! $key_store ) {

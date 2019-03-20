@@ -38,8 +38,8 @@ function lockr_admin_submit_add_key() {
 
 	if ( isset( $_POST['create_key'] ) && 'on' === $_POST['create_key'] ) {
 		// Create a default encryption key.
-		$client       = lockr_key_client();
-		$key_value    = base64_encode( $client->create( 256 ) );
+		$client       = lockr_client();
+		$key_value    = base64_encode( $client->generateKey( 256 ) );
 		$auto_created = true;
 	} elseif ( isset( $_POST['key_value'] ) ) {
 		$key_value = sanitize_text_field( wp_unslash( $_POST['key_value'] ) );
