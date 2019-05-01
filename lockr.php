@@ -577,14 +577,14 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
  * @param string $key_name The key name.
  */
 function lockr_delete_key( $key_name ) {
-	// TODO: UPDATE FOR NEW LIBRARY!
+
 	$key_value = lockr_get_key( $key_name );
 
 	$client = lockr_client();
 	if ( $client ) {
 
 		try {
-			$client->delete( $key_name );
+			$client->deleteSecretValue( $key_name );
 		} catch ( \Exception $e ) {
 			return false;
 		}
