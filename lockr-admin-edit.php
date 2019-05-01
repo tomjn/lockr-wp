@@ -56,10 +56,8 @@ function lockr_admin_submit_edit_key() {
  * Constructs a form to edit an existing key in Lockr.
  */
 function lockr_edit_form() {
-	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
-	$js_url    = LOCKR__PLUGIN_URL . '/js/lockr.js';
+	$status = lockr_check_registration();
+	$exists = $status['keyring_label'] ? true : false;
 
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'lockr_keys';

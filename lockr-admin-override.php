@@ -97,9 +97,7 @@ function lockr_admin_submit_override_key() {
  */
 function lockr_override_form() {
 	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
-	$js_url    = LOCKR__PLUGIN_URL . '/js/lockr.js';
+	$exists    = $status['keyring_label'] ? true : false;
 	$blacklist = array(
 		'active_plugins',
 		'cron',

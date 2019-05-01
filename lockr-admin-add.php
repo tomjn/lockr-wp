@@ -64,10 +64,8 @@ function lockr_admin_submit_add_key() {
  * Create the form to add a key to Lockr.
  */
 function lockr_add_form() {
-	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
-	$js_url    = LOCKR__PLUGIN_URL . '/js/lockr.js';
+	$status = lockr_check_registration();
+	$exists = $status['keyring_label'] ? true : false;
 	?>
 	<div class="wrap">
 		<?php if ( ! $exists ) : ?>

@@ -42,7 +42,8 @@ WP_CLI::add_command( 'lockr get key', 'lockr_command_get_key' );
  * @param array $assoc_args an array of associated arguments passed into the command.
  */
 function lockr_command_register_site( $args, $assoc_args ) {
-	list( $exists, $available ) = lockr_check_registration();
+	$status = lockr_check_registration();
+	$exists = $status['keyring_label'] ? true : false;
 
 	if ( $exists ) {
 		WP_CLI::error( 'This site is already registered with Lockr.' );
@@ -74,8 +75,8 @@ function lockr_command_register_site( $args, $assoc_args ) {
 	} catch ( LockrServerException $e ) {
 		WP_CLI::error( 'An unknown error has occurred, please try again later.' );
 	}
-
-	list( $exists, $available ) = lockr_check_registration();
+	$status = lockr_check_registration();
+	$exists = $status['keyring_label'] ? true : false;
 
 	if ( $exists ) {
 		WP_CLI::success( "Site is now registered with Lockr. You're good to start setting keys" );
@@ -184,18 +185,21 @@ function lockr_command_lockdown( $args, $assoc_args ) {
 		copy( $patch_remote, $patch_path );
 
 		WP_CLI::log( "Patching {$name}." );
-		$cmd = implode( ' ', array(
-			'patch',
-			// We do not need a backup because reverting the patch can be done
-			// via the user's version control system.
-			'--no-backup-if-mismatch',
-			'-N',
-			'-p1',
-			'-d',
-			escapeshellarg( $plugin_path ),
-			'<',
-			escapeshellarg( $patch_path ),
-		) );
+		$cmd = implode(
+			' ',
+			array(
+				'patch',
+				// We do not need a backup because reverting the patch can be done
+				// via the user's version control system.
+				'--no-backup-if-mismatch',
+				'-N',
+				'-p1',
+				'-d',
+				escapeshellarg( $plugin_path ),
+				'<',
+				escapeshellarg( $patch_path ),
+			)
+		);
 		WP_CLI::log( "Running `{$cmd}`." );
 		ob_start();
 		passthru( $cmd, $return_code );
