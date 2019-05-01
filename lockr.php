@@ -523,13 +523,14 @@ function lockr_get_key( $key_name ) {
 function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null, $auto_created = false ) {
 
 	$client = lockr_client();
+	$sovereignty = get_option( 'lockr_region', null );
 
 	if ( false === $client ) {
 		return false;
 	}
 
 	try {
-		$key_remote = $client->createSecretValue( $key_name, $key_value, $key_label ) ?: false;
+		$key_remote = $client->createSecretValue( $key_name, $key_value, $key_label, $sovereignty ) ?: false;
 	} catch ( \Exception $e ) {
 		return false;
 	}
