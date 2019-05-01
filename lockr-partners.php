@@ -363,5 +363,5 @@ function lockr_partner_register( $client_token, $partner, $env = null ) {
 	$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
 
 	// Now that we have the information, let's create the certs.
-	return create_certs( $client_token, $dn, $dirname, $env, $force_prod, $partner, $partner_certs );
+	return create_certs( $client_token, $dn, $dirname, $partner );
 }
