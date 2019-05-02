@@ -78,8 +78,10 @@ jQuery( function ( $ ) {
 		var popup = window.open(url, 'LockrRegister', 'toolbar=off,height=850,width=650');
 		window.addEventListener('message', function (e) {
 				var client_token = e.data.client_token;
+				var client_prod_token = e.data.prod_client_token;
 				popup.close();
 				$('#client-token #lockr_client_token').val(client_token);
+				$('#client-token #lockr_client_prod_token').val(client_prod_token);
 				$('#client-token #submit').click();
 		}, false);
 	});

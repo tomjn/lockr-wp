@@ -247,14 +247,15 @@ function lockr_check_registration() {
 		'partner'       => array(),
 	);
 
+	$partner           = lockr_get_partner();
+	$status['partner'] = $partner;
+
 	$client = lockr_client();
 
 	try {
 			$client_info = $client->getInfo();
-			$partner     = lockr_get_partner();
 
 			$status['valid_cert']    = true;
-			$status['partner']       = $partner;
 			$status['environment']   = $client_info['env'];
 			$status['client_label']  = $client_info['label'];
 			$status['keyring_label'] = $client_info['keyring']['label'];
@@ -275,10 +276,11 @@ function lockr_check_registration() {
  * @param array  $dn The dn array for the CSR.
  * @param string $dirname The directory to put the certificates in.
  * @param array  $partner The partner information if it exists.
+ * @param bool   $partner_certs If the partner already has certificates provisioned.
  *
  * @return bool If the certs were successfully created.
  */
-function create_certs( $client_token, $dn = array(), $dirname = ABSPATH . '.lockr', $partner = array() ) {
+function create_certs( $client_token, $dn = array(), $dirname = ABSPATH . '.lockr', $partner = array(), $partner_certs = false ) {
 
 	if ( empty( $dn ) ) {
 		$dn = array(
@@ -289,7 +291,7 @@ function create_certs( $client_token, $dn = array(), $dirname = ABSPATH . '.lock
 		);
 	}
 
-	if ( ! isset( $partner['name'] ) ) {
+	if ( ! $partner_certs ) {
 
 		$client = lockr_client( true );
 
@@ -522,7 +524,7 @@ function lockr_get_key( $key_name ) {
  */
 function lockr_set_key( $key_name, $key_value, $key_label, $option_override = null, $auto_created = false ) {
 
-	$client = lockr_client();
+	$client      = lockr_client();
 	$sovereignty = get_option( 'lockr_region', null );
 
 	if ( false === $client ) {
@@ -537,7 +539,7 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
 
 	if ( false !== $key_remote ) {
 		global $wpdb;
-		$table_name = $wpdb->prefix . 'lockr_keys';
+		$table_name   = $wpdb->prefix . 'lockr_keys';
 		$existing_key = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE key_name = %s", array( $key_name ) ) ); // WPCS: unprepared SQL OK.
 		$key_id       = isset( $existing_key[0]->id ) ? array( 'id' => $existing_key[0]->id ) : null;
 		if ( $key_id ) {
@@ -564,7 +566,7 @@ function lockr_set_key( $key_name, $key_value, $key_label, $option_override = nu
 				$key_data['key_abstract'] = $key_abstract;
 			}
 
-			$key_store  = $wpdb->update( $table_name, $key_data, $key_id );
+			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
 			return $key_store;
 		}
 	}

@@ -59,6 +59,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Kinsta',
@@ -95,6 +100,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Flywheel',
@@ -134,6 +144,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'WPEngine',
@@ -170,6 +185,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'GoDaddy',
@@ -203,6 +223,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Siteground',
@@ -245,6 +270,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Bluehost',
@@ -282,6 +312,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Liquid Web',
@@ -297,7 +332,7 @@ EOL;
 	if ( defined( 'IS_PRESSABLE' ) ) {
 		$desc = <<<EOL
 			We're detecting you're on Pressable and a friend of theirs is a friend of ours.
-			Welcome to Lockr! We have already setup your connection automatically.
+			Welcome to Lockr!
 EOL;
 
 		$staging = false;
@@ -319,6 +354,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Pressable',
@@ -338,12 +378,13 @@ EOL;
  * Setup the necessary partner registration certs.
  *
  * @param string $client_token The client token given by accounts.lockr.io for authorization.
+ * @param string $client_prod_token The production client token given by accounts.lockr.io for authorization.
  * @param array  $partner The Partner array.
  * @param string $env The Envrionment to register.
  *
  * @return bool If the registration was successful.
  */
-function lockr_partner_register( $client_token, $partner, $env = null ) {
+function lockr_partner_register( $client_token, $client_prod_token, $partner, $env = null ) {
 
 	$dn = array(
 		'countryName'         => 'US',
@@ -363,5 +404,13 @@ function lockr_partner_register( $client_token, $partner, $env = null ) {
 	$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
 
 	// Now that we have the information, let's create the certs.
-	return create_certs( $client_token, $dn, $dirname, $partner );
+	if ( $force_prod ) {
+		$dev_cert = create_certs( $client_token, $dn, $dirname, $partner, $partner_certs );
+		if ( $dev_cert ) {
+			return create_certs( $client_prod_token, $dn, $dirname, $partner, $partner_certs );
+		}
+	} else {
+		return create_certs( $client_token, $dn, $dirname, $partner, $partner_certs );
+	}
+
 }

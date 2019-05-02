@@ -24,10 +24,19 @@ function register_lockr_settings() {
 		'lockr_token_text',
 		'lockr_register_token'
 	);
+
 	add_settings_field(
 		'lockr_client_token',
 		'',
 		'lockr_client_token_input',
+		'lockr',
+		'lockr_token'
+	);
+
+	add_settings_field(
+		'lockr_client_prod_token',
+		'',
+		'lockr_client_prod_token_input',
 		'lockr',
 		'lockr_token'
 	);
@@ -90,6 +99,21 @@ function lockr_client_token_input() {
 	?>
 <input id="lockr_client_token"
 	name="lockr_options[lockr_client_token]"
+	size="60"
+	type="hidden"
+	value="" />
+
+	<?php
+}
+
+/**
+ * Create Lockr prod token text input.
+ */
+function lockr_client_prod_token_input() {
+
+	?>
+<input id="lockr_client_prod_token"
+	name="lockr_options[lockr_client_prod_token]"
 	size="60"
 	type="hidden"
 	value="" />
@@ -262,13 +286,14 @@ function lockr_options_validate( $input ) {
 
 	if ( 'createClient' === $op ) {
 
-		$client_token = sanitize_key( $input['lockr_client_token'] );
-		$partner      = lockr_get_partner();
+		$client_token      = sanitize_key( $input['lockr_client_token'] );
+		$client_prod_token = sanitize_key( $input['lockr_client_prod_token'] );
+		$partner           = lockr_get_partner();
 
 		if ( empty( $partner ) ) {
 			$success = create_certs( $client_token );
 		} else {
-			$success = lockr_partner_register( $client_token, $partner );
+			$success = lockr_partner_register( $client_token, $client_prod_token, $partner );
 		}
 
 		if ( $success ) {
@@ -282,13 +307,15 @@ function lockr_options_validate( $input ) {
 			);
 		}
 	} elseif ( 'migrate' === $op ) {
-		$client_token = sanitize_key( $input['lockr_client_token'] );
-		$partner      = lockr_get_partner();
+
+		$client_token      = sanitize_key( $input['lockr_client_token'] );
+		$client_prod_token = sanitize_key( $input['lockr_client_prod_token'] );
+		$partner           = lockr_get_partner();
 
 		if ( empty( $partner ) ) {
 			$success = create_certs( $client_token );
 		} else {
-			$success = lockr_partner_register( $client_token, $partner );
+			$success = lockr_partner_register( $client_token, $client_prod_token, $partner );
 		}
 
 		if ( $success ) {
@@ -366,11 +393,11 @@ function lockr_configuration_form() {
 
 		if ( null === $partner ) {
 			if ( file_exists( ABSPATH . '.lockr/prod/pair.pem' ) ) {
-				$migrate_possible   = false;
-				$partner_certs      = false;
+				$migrate_possible = false;
+				$partner_certs    = false;
 			} else {
-				$migrate_possible    = true;
-				$partner_certs       = false;
+				$migrate_possible = true;
+				$partner_certs    = false;
 			}
 		}
 
