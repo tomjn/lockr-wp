@@ -19,7 +19,7 @@
     },
     "license": "GPL-2.0-or-later",
     "require": {
-        "lockr/lockr": "dev-master",
+        "lockr/lockr": "^1.0",
         "defuse/php-encryption": "^2.2"
     }
 }

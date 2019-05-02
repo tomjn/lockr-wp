@@ -3,7 +3,7 @@ namespace Lockr;
 
 use RuntimeException;
 
-use Guzzle\Psr7;
+use GuzzleHttp\Psr7;
 use Symfony\Component\Yaml\Yaml;
 
 use Lockr\KeyWrapper\MultiKeyWrapper;
@@ -52,6 +52,7 @@ class Lockr
         $query = <<<'EOQ'
 mutation CreateCertClient($input: CreateCertClient!) {
   createCertClient(input: $input) {
+    env
     auth {
       ... on LockrCert {
         certText
@@ -60,6 +61,7 @@ mutation CreateCertClient($input: CreateCertClient!) {
   }
 }
 EOQ;
+        $t0 = microtime(true);
         $data = $this->client->query([
             'query' => $query,
             'variables' => [
@@ -69,9 +71,13 @@ EOQ;
                 ],
             ],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('create_cert_client', $t1 - $t0);
         return [
             'key_text' => $key_text,
             'cert_text' => $data['createCertClient']['auth']['certText'],
+            'env' => $data['createCertClient']['env'],
         ];
     }
 
@@ -84,6 +90,7 @@ mutation CreatePantheonClient($input: CreatePantheonClient!) {
   }
 }
 EOQ;
+        $t0 = microtime(true);
         $this->client->query([
             'query' => $query,
             'variables' => [
@@ -92,6 +99,9 @@ EOQ;
                 ],
             ],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('create_pantheon_client', $t1 - $t0);
     }
 
     /**
@@ -122,10 +132,19 @@ EOQ;
             hasCreditCard
             trialEnd
         }
+        auth {
+            ... on LockrCert {
+                expires
+            }
+        }
     }
 }
 EOQ;
+        $t0 = microtime(true);
         $data = $this->client->query(['query' => $query]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('get_info', $t1 - $t0);
         return $data['self'];
     }
 
@@ -167,12 +186,16 @@ EOQ;
         if (!is_null($sovereignty)) {
             $input['sovereignty'] = $sovereignty;
         }
+        $t0 = microtime(true);
         $data = $this->client->query([
             'query' => $query,
             'variables' => [
                 'input' => $input,
             ],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('create_secret_value', $t1 - $t0);
         $this->info->setSecretInfo($name, $info);
         return $data['ensureSecretValue']['id'];
     }
@@ -197,12 +220,16 @@ query LatestSecretValue($name: String!) {
     }
 }
 EOQ;
+        $t0 = microtime(true);
         $data = $this->client->query([
             'query' => $query,
             'variables' => [
                 'name' => $name,
             ],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('get_secret_value', $t1 - $t0);
         if (!isset($data['self']['secret']['latest']['value'])) {
             return null;
         }
@@ -228,6 +255,7 @@ mutation Delete($input: DeleteClientVersions!) {
     deleteClientVersions(input: $input)
 }
 EOQ;
+        $t0 = microtime(true);
         $this->client->query([
             'query' => $query,
             'variables' => [
@@ -236,6 +264,9 @@ EOQ;
                 ],
             ],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('delete_secret_value', $t1 - $t0);
     }
 
     /**
@@ -255,10 +286,14 @@ EOQ;
         if ($size !== 256 && $size !== 192 && $size !== 128) {
             throw new \Exception("Invalid key size: {$size}");
         }
+        $t0 = microtime(true);
         $data = $this->client->query([
             'query' => $query,
             'variables' => ['size' => "AES{$size}"],
         ]);
+        $t1 = microtime(true);
+        $this->client->getStats()
+            ->lockrCallCompleted('generate_key', $t1 - $t0);
         return base64_decode($data['randomKey']);
     }
 
@@ -287,15 +322,21 @@ EOQ;
     }
 
     /**
-     * Allows programmatic registration of new sites.
+     * Requests a dev client token for a new or existing keyring.
      *
      * @param string $email
      * @param string $password
-     * @param string $site_label
-     * @param string $client_label
+     * @param string $keyring_label
+     * @param string|null $client_label
+     * @param string|null $keyring_id
      */
-    public function createSite($email, $password, $site_label, $client_label)
-    {
+    public function requestClientToken(
+        $email,
+        $password,
+        $keyring_label,
+        $client_label = null,
+        $keyring_id = null
+    ) {
         $uri = (new Psr7\Uri())
             ->withScheme('https')
             ->withHost($this->accountsHost)
@@ -303,19 +344,22 @@ EOQ;
         $data = [
             'email' => $email,
             'password' => $password,
-            'site_label' => $site_label,
-            'client_label' => $client_label,
+            'keyring_label' => $keyring_label,
         ];
-        $req = new Psr7\Request(
-            'POST',
-            $uri,
-            [
-                'content-type' => ['application/json'],
-                'accept' => ['application/json'],
+        if (!is_null($client_label)) {
+            $data['client_label'] = $client_label;
+        }
+        if (!is_null($keyring_id)) {
+            $data['keyring_id'] = $keyring_id;
+        }
+        $resp = $this->client->getHttpClient()->request('POST', $uri, [
+            'headers' => [
+                'content-type' => 'application/json',
+                'accept' => 'application/json',
             ],
-            json_encode($data)
-        );
-        $resp = $this->loader->getHttpClient()->send($req);
+            'json' => $data,
+            'timeout' => 30,
+        ]);
         return json_decode((string) $resp->getBody(), true);
     }
 }

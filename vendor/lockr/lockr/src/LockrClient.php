@@ -5,14 +5,16 @@ use GuzzleHttp;
 use GuzzleHttp\Psr7;
 
 use Lockr\Exception\LockrApiException;
-use Lockr\Guzzle\MiddlewareFactory;
 
 class LockrClient
 {
-    const VERSION = 'dev';
+    const VERSION = '1.0.4';
 
     /** @var GuzzleHttp\ClientInterface $httpClient */
     private $httpClient;
+
+    /** @var LockrStatsInterface $stats */
+    private $stats;
 
     /** @var bool $hasCert */
     private $hasCert = false;
@@ -20,9 +22,12 @@ class LockrClient
     /**
      * @param GuzzleHttp\ClientInterface $http_client
      */
-    public function __construct(GuzzleHttp\ClientInterface $http_client)
-    {
+    public function __construct(
+        GuzzleHttp\ClientInterface $http_client,
+        LockrStatsInterface $stats = null
+    ) {
         $this->httpClient = $http_client;
+        $this->stats = $stats ?: new BlackholeStats();
         $this->hasCert = (bool) $http_client->getConfig('cert');
     }
 
@@ -34,6 +39,26 @@ class LockrClient
     public function hasCert()
     {
         return $this->hasCert;
+    }
+
+    /**
+     * Gets the underlying HTTP client.
+     *
+     * @return GuzzleHttp\ClientInterface
+     */
+    public function getHttpClient()
+    {
+        return $this->httpClient;
+    }
+
+    /**
+     * Returns the stats handler.
+     *
+     * @return LockrStatsInterface
+     */
+    public function getStats()
+    {
+        return $this->stats;
     }
 
     /**
@@ -66,12 +91,9 @@ class LockrClient
      */
     public function query(array $data)
     {
-        $headers = [
-            'content-type' => ['application/json'],
-        ];
-        $body = json_encode($data);
-        $req = new Psr7\Request('POST', '/graphql', $headers, $body);
-        $resp = $this->httpClient->send($req);
+        $resp = $this->httpClient->request('POST', '/graphql', [
+            'json' => $data,
+        ]);
         $resp_data = json_decode((string) $resp->getBody(), true);
         if (!empty($resp_data['errors'])) {
             throw new LockrApiException($resp_data['errors']);
