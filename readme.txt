@@ -1,20 +1,20 @@
 === Plugin Name ===
 Contributors: cteitzel, tynor
-Tags: encrypt, encryption, security, API, key, password, security, secure, locker
+Tags: encrypt, secrets management, secrets, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
-Tested up to: 5.0
+Tested up to: 5.2
 Requires PHP: 5.5
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Lockr is the first API & Encryption key management service for WordPress, providing an affordable solution to secure keys used by plugins.
+Lockr is the first API & Encryption key management service for WordPress, providing an affordable solution to secure secrets used by plugins.
 
 == Description ==
 
 = API & ENCRYPTION KEY MANAGEMENT FOR WORDPRESS =
 
-Lockr is the first hosted secrets management solution for WordPress, providing an affordable solution for all sites to properly manage site secrets such as API and encryption keys used by their plugins. Lockr's offsite key management solution protects against critical vulnerabilities, delivers best-practice security to help sites comply with many industry regulations, and provides a Defense in Depth approach to securing your data. Lockr also provides AES-256 encryption to your custom plugins in a seamless manner to protect data at rest in your site. And best of all, even though it delivers enterprise-grade key management, your first key and 1500 key requests are free! Learn more at http://www.lockr.io.
+Lockr is the first hosted secrets management solution for WordPress, providing an affordable solution for all sites to properly manage site secrets such as API and encryption keys used by their plugins. Lockr's offsite key management solution protects against critical vulnerabilities, delivers best-practice security to help sites comply with many industry regulations, and provides a Defense in Depth approach to securing your data. Lockr also provides AES-256 encryption to your custom plugins in a seamless manner to protect data at rest in your site. And best of all, even though it delivers enterprise-grade key management, you can try it for 2 weeks free! Learn more at http://www.lockr.io.
 
 = Lockr Features: =
 * Easy to configure and setup in WordPress
@@ -49,9 +49,8 @@ Installation of Lockr is simple, and if you are on a supported hosting partner, 
 1. Upload the Lockr directory to the `/wp-content/plugins/plugin-name` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate Lockr through the 'Plugins' screen in your WordPress
 3. Visit Settings > Lockr
-4. If you are on a partnering hosting provider you can skip the automation and go directly to registering your site. If you are not, follow the steps in the forms presented to automate the issuance of a certificate to connect to Lockr.
-5a. Existing Lockr User: Enter the email address you’ve used in the past along with your password and you're set.
-5b. New Lockr User: Enter the email you would like to register the site under and we'll do the rest.
+4. Follow the prompts to connect your site to a KeyRing. This will open up a popup window where current users can login, or new users can register for an account.
+5. You can create a new KeyRing or connect your site to an existing KeyRing to share secrets with another application on your account.
 6. Once the dashboard shows you as having a certificate and registration you're done!
 7. When ready to deploy to production, follow the prompts provided which will remove the development certificate and place a production one in its place. With production you're in our guaranteed uptime environment.
 
@@ -78,6 +77,29 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 
 == Changelog ==
+
+= 3.0 =
+**Welcome to Lockr v2!**
+
+Welcome to the new Lockr 2.0! We’ve completely re-architected the service from the ground up and as such the modules got an overhaul at the same time.
+
+**Re Architected from the ground up**
+The latest version of Lockr does not sit on top of the previous version, but rather incorporates all that we have learned since the first release. It takes full advantage of the latest technical improvements to speed, performance and security.
+
+**FASTER**
+We’ve always been committed to creating a fast lookup time for any secret in Lockr. With 2.0, secret retrievals are blazing fast, now in the sub-100 millisecond range. Go ahead and utilize Lockr with the peace of mind knowing we won’t be slowing you down.
+
+**Lockr KeyRings**
+Secrets are no longer organized by site, but rather by a new logical grouping we call KeyRings. These KeyRings are easier to create (now done in a convenient popup) and it’s even easier now to create clients (connections) on multiple environments which all connect to the same KeyRing. This means you can deploy Lockr to your development, staging, and local environments with ease and without the risk of creating multiple subscriptions.
+
+**Cloud Independent**
+Lockr infrastructure has now freed itself of cloud host-proprietary capabilities. This allows Lockr to be deployed across multiple various cloud providers to increase performance by offering more points of presence. Be on the lookout for more of these as they come online and if you have a location you’d like to see Lockr located, just drop us a line.
+
+**Cache Mesh Network**
+Lockr has improved the speed of key retrieval through a patent-pending mesh network of cache Hardware Security Modules (HSMs). These caches will automatically distribute and hold the values you store closer to where your site is located. The result is a significant improvement in performance.
+
+Want more info? Check out our [blog post](https://www.lockr.io/blog/any-key-anywhere-2/) where we go into more details.
+
 
 = 2.4 =
 **Big update!**
