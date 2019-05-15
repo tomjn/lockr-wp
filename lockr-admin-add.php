@@ -38,8 +38,8 @@ function lockr_admin_submit_add_key() {
 
 	if ( isset( $_POST['create_key'] ) && 'on' === $_POST['create_key'] ) {
 		// Create a default encryption key.
-		$client       = lockr_key_client();
-		$key_value    = base64_encode( $client->create( 256 ) );
+		$client       = lockr_client();
+		$key_value    = base64_encode( $client->generateKey( 256 ) );
 		$auto_created = true;
 	} elseif ( isset( $_POST['key_value'] ) ) {
 		$key_value = sanitize_text_field( wp_unslash( $_POST['key_value'] ) );
@@ -64,10 +64,8 @@ function lockr_admin_submit_add_key() {
  * Create the form to add a key to Lockr.
  */
 function lockr_add_form() {
-	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
-	$js_url    = LOCKR__PLUGIN_URL . '/js/lockr.js';
+	$status = lockr_check_registration();
+	$exists = $status['keyring_label'] ? true : false;
 	?>
 	<div class="wrap">
 		<?php if ( ! $exists ) : ?>

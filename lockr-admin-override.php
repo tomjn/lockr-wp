@@ -42,9 +42,11 @@ function lockr_admin_submit_override_key() {
 
 		if ( isset( $_POST['create_key'] ) && 'on' === $_POST['create_key'] ) {
 			// Create a default encryption key.
-			$client    = lockr_key_client();
-			$key_value = $client->create( 256 );
+			$client       = lockr_client();
+			$key_value    = $client->generateKey( 256 );
+			$auto_created = true;
 		} else {
+			$auto_created = false;
 			if ( isset( $_POST['key_value'] ) ) {
 				$key_value = sanitize_text_field( wp_unslash( $_POST['key_value'] ) );
 			} else {
@@ -52,7 +54,7 @@ function lockr_admin_submit_override_key() {
 			}
 		}
 
-		$key_store = lockr_set_key( $key_name, $key_value, $key_label, $option_path );
+		$key_store = lockr_set_key( $key_name, $key_value, $key_label, $option_path, $auto_created );
 
 		if ( $key_store ) {
 			// Successfully Added so save the option to replace the value.
@@ -80,11 +82,11 @@ function lockr_admin_submit_override_key() {
 				}
 			}
 
-			wp_redirect( admin_url( 'admin.php?page=lockr&message=success' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=lockr&message=success' ) );
 			exit;
 		} else {
 			// Failed Addition.
-			wp_redirect( admin_url( 'admin.php?page=lockr-override-option&message=failed' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=lockr-override-option&message=failed' ) );
 			exit;
 		}
 	}
@@ -95,9 +97,7 @@ function lockr_admin_submit_override_key() {
  */
 function lockr_override_form() {
 	$status    = lockr_check_registration();
-	$exists    = $status['exists'];
-	$available = $status['available'];
-	$js_url    = LOCKR__PLUGIN_URL . '/js/lockr.js';
+	$exists    = $status['keyring_label'] ? true : false;
 	$blacklist = array(
 		'active_plugins',
 		'cron',

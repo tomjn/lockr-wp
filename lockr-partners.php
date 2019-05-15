@@ -59,6 +59,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Kinsta',
@@ -95,6 +100,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Flywheel',
@@ -134,6 +144,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'WPEngine',
@@ -170,6 +185,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'GoDaddy',
@@ -203,6 +223,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Siteground',
@@ -245,6 +270,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Bluehost',
@@ -282,6 +312,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Liquid Web',
@@ -297,7 +332,7 @@ EOL;
 	if ( defined( 'IS_PRESSABLE' ) ) {
 		$desc = <<<EOL
 			We're detecting you're on Pressable and a friend of theirs is a friend of ours.
-			Welcome to Lockr! We have already setup your connection automatically.
+			Welcome to Lockr!
 EOL;
 
 		$staging = false;
@@ -319,6 +354,11 @@ EOL;
 		} else {
 			$cert = $dirname . '/prod/pair.pem';
 		}
+
+		if ( ! file_exists( $cert ) ) {
+			$cert = null;
+		}
+
 		return array(
 			'name'          => 'custom',
 			'title'         => 'Pressable',
@@ -335,12 +375,16 @@ EOL;
 }
 
 /**
- * Setup the necessary auto registration certs.
+ * Setup the necessary partner registration certs.
  *
+ * @param string $client_token The client token given by accounts.lockr.io for authorization.
+ * @param string $client_prod_token The production client token given by accounts.lockr.io for authorization.
  * @param array  $partner The Partner array.
  * @param string $env The Envrionment to register.
+ *
+ * @return bool If the registration was successful.
  */
-function lockr_auto_register( $partner = array(), $env = null ) {
+function lockr_partner_register( $client_token, $client_prod_token, $partner, $env = null ) {
 
 	$dn = array(
 		'countryName'         => 'US',
@@ -354,64 +398,19 @@ function lockr_auto_register( $partner = array(), $env = null ) {
 		$env = null;
 	}
 
-		$dn            = ( isset( $partner['dn'] ) ) ? $partner['dn'] : $dn;
-		$dirname       = ( isset( $partner['dirname'] ) ) ? $partner['dirname'] : ABSPATH . '.lockr';
-		$force_prod    = ( isset( $partner['force_prod'] ) ) ? $partner['force_prod'] : false;
-		$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
+	$dn            = ( isset( $partner['dn'] ) ) ? $partner['dn'] : $dn;
+	$dirname       = ( isset( $partner['dirname'] ) ) ? $partner['dirname'] : ABSPATH . '.lockr';
+	$force_prod    = ( isset( $partner['force_prod'] ) ) ? $partner['force_prod'] : false;
+	$partner_certs = ( isset( $partner['partner_certs'] ) ) ? $partner['partner_certs'] : false;
 
 	// Now that we have the information, let's create the certs.
-	create_partner_certs( $dn, $dirname, $env, $force_prod, $partner_certs );
-}
-
-/**
- * Setup the necessary auto registration certs.
- *
- * @param array   $dn The dn array for the CSR.
- * @param string  $dirname The directory to put the certificates in.
- * @param string  $env The Environment we are creating certificates for.
- * @param boolean $force_prod Force creating the production cert.
- * @param boolean $partner_certs Whether the parnter already has certificates in place.
- */
-function create_partner_certs( $dn = array(), $dirname = ABSPATH . '.lockr', $env = null, $force_prod = false, $partner_certs = false ) {
-
-	if ( null === $env && ! $partner_certs ) {
-		$partner_null   = new NullPartner( 'us' );
-		$partner_client = Lockr::create( $partner_null );
-		$dev_client     = new SiteClient( $partner_client );
-
-		try {
-			$result = $dev_client->createCert( $dn );
-		} catch ( LockrClientException $e ) {
-			// No need to do anything as the certificate can be created manually.
-			return;
-		} catch ( LockrServerException $e ) {
-			// No need to do anything as the certificate can be created manually.
-			return;
+	if ( $force_prod ) {
+		$dev_cert = create_certs( $client_token, $dn, $dirname, $partner, $partner_certs );
+		if ( $dev_cert ) {
+			return create_certs( $client_prod_token, $dn, $dirname, $partner, $partner_certs );
 		}
-
-		if ( ! empty( $result['cert_text'] ) ) {
-			lockr_write_cert_pair( $dirname . '/dev', $result );
-			update_option( 'lockr_partner', 'custom' );
-		}
+	} else {
+		return create_certs( $client_token, $dn, $dirname, $partner, $partner_certs );
 	}
 
-	if ( 'dev' === $env && ! file_exists( $dirname . '/prod/pair.pem' ) && $force_prod && ! $partner_certs ) {
-		$partner_dev    = new Partner( $dirname . '/dev/pair.pem', 'custom', 'us' );
-		$partner_client = Lockr::create( $partner_dev );
-		$prod_client    = new SiteClient( $partner_client );
-
-		try {
-			$result = $prod_client->createCert( $dn );
-		} catch ( LockrClientException $e ) {
-			// No need to do anything as the certificate can be created manually.
-			return;
-		} catch ( LockrServerException $e ) {
-			// No need to do anything as the certificate can be created manually.
-			return;
-		}
-
-		if ( ! empty( $result['cert_text'] ) ) {
-			lockr_write_cert_pair( $dirname . '/prod', $result );
-		}
-	}
 }

@@ -50,6 +50,13 @@ function lockr_admin_styles( $hook ) {
 	if ( 'lockr' === substr( $hook, 0, 5 ) ) {
 		wp_enqueue_style( 'lockrStylesheet', plugins_url( 'css/lockr.css', __FILE__ ), array(), '2.4', 'all' );
 		wp_enqueue_script( 'lockrScript', plugins_url( 'js/lockr.js', __FILE__ ), array(), '2.4', true );
+		$status           = lockr_check_registration();
+		$site_information = array(
+			'name'       => get_option( 'blogname' ),
+			'force_prod' => isset( $status['partner']['force_prod'] ) ? $status['partner']['force_prod'] : false,
+			'keyring_id' => isset( $status['keyring_id'] ) ? $status['keyring_id'] : false,
+		);
+		wp_localize_script( 'lockrScript', 'lockr_settings', $site_information );
 	} elseif ( 'post' === substr( $hook, 0, 4 ) ) {
 		wp_enqueue_script( 'lockrScript', plugins_url( 'js/lockr-post.js', __FILE__ ), array(), '2.4', true );
 	}
@@ -59,7 +66,6 @@ add_action( 'admin_enqueue_scripts', 'lockr_admin_styles' );
 
 if ( ! get_option( 'lockr_partner' ) ) {
 	$partner = lockr_get_partner();
-
 	if ( $partner ) {
 		add_option( 'lockr_partner', $partner['name'] );
 	}
@@ -75,15 +81,14 @@ function lockr_keys_table() {
 	$query           = "SELECT * FROM $table_name WHERE key_name = 'lockr_default_key'";
 	$default_key     = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
 	$status          = lockr_check_registration();
-	$exists          = $status['exists'];
-	$available       = $status['available'];
+	$exists          = $status['keyring_label'] ? true : false;
 	$deleted_default = get_option( 'lockr_default_deleted' );
 	$auto_created    = (int) $default_key[0]->auto_created;
 
 	if ( $exists && ! $default_key && ! $deleted_default ) {
 		// Create a default encryption key.
-		$client    = lockr_key_client();
-		$key_value = base64_encode( $client->create( 256 ) );
+		$client    = lockr_client();
+		$key_value = base64_encode( $client->generateKey( 256 ) );
 
 		lockr_set_key( 'lockr_default_key', $key_value, 'Lockr Default Encryption Key', null, true );
 	}
@@ -93,10 +98,10 @@ function lockr_keys_table() {
 		$key_store = $wpdb->update( $table_name, $key_data, $key_id );
 	}
 
-	if ( isset( $status['info']['env'] ) ) {
+	if ( isset( $status['environment'] ) ) {
 
-		if ( 'prod' === $status['info']['env'] ) {
-			$environment = $status['info']['env'];
+		if ( 'prod' === $status['environment'] ) {
+			$environment = $status['environment'];
 		} else {
 			$environment = 'dev';
 		}
@@ -128,36 +133,4 @@ function lockr_keys_table() {
 		<?php endif; ?>
 	</div>
 	<?php
-}
-
-
-/**
- * Migrate the abstracts into their correct environment display.
- *
- * @param string $environment What environment the site is in.
- */
-function lockr_update_abstracts( $environment ) {
-
-	global $wpdb;
-	$table_name = $wpdb->prefix . 'lockr_keys';
-	$query      = "SELECT * FROM $table_name";
-	$keys       = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
-
-	foreach ( $keys as $key ) {
-		$key_value = lockr_get_key( $key->key_name );
-
-		if ( $key_value ) {
-			$key_abstract = '**************' . substr( $key_value, -4 );
-			$key_id       = array( 'id' => $key->id );
-
-			if ( 'prod' !== $environment ) {
-				$key_data = array( 'dev_abstract' => $key_abstract );
-			} else {
-				$key_data = array( 'key_abstract' => $key_abstract );
-			}
-
-			$key_store = $wpdb->update( $table_name, $key_data, $key_id );
-		}
-	}
-	update_option( 'lockr_' . $environment . '_abstract_migrated', true );
 }

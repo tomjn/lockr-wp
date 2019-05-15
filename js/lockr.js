@@ -62,4 +62,28 @@ jQuery( function ( $ ) {
 			$("#option-total-number").val(optionNumber);
 		}
 	});
+
+	$('#client-token #token-button').click(function () {
+		if( lockr_settings.keyring_id ) {
+			var url = 'https://accounts.lockr.io/move-to-prod?lockr_keyring=' + lockr_settings.keyring_id;
+		} else {
+			var url = 'https://accounts.lockr.io/register-keyring';
+			var site_name = encodeURIComponent(lockr_settings.name).replace(/%20/g, '+');
+			url += '?keyring_label=' + site_name;
+			if (lockr_settings.force_prod) {
+				url += '&force_prod=true';
+			}
+		}
+
+		var popup = window.open(url, 'LockrRegister', 'toolbar=off,height=850,width=650');
+		window.addEventListener('message', function (e) {
+				var client_token = e.data.client_token;
+				var client_prod_token = e.data.prod_client_token;
+				popup.close();
+				$('#client-token #lockr_client_token').val(client_token);
+				$('#client-token #lockr_client_prod_token').val(client_prod_token);
+				$('#client-token #submit').click();
+		}, false);
+	});
 });
+
