@@ -29,7 +29,14 @@ class Lockr_WP_Secret_Info implements SecretInfoInterface {
 		$return     = $wpdb->get_results( $query ); // WPCS: unprepared SQL OK.
 		$keys       = array();
 		foreach ( $return as $key ) {
-			$keys[ $key->key_name ] = $key->key_value;
+			if ( json_decode( $key->key_value ) ) {
+				$keys[ $key->key_name ] = $key->key_value;
+			} else {
+				$key_data = array( 'wrapping_key' => $key->key_value );
+				$key_data = wp_json_encode( $key_data );
+
+				$keys[ $key->key_name ] = $key_data;
+			}
 		}
 		$this->data = $keys;
 	}
@@ -78,7 +85,7 @@ class Lockr_WP_Secret_Info implements SecretInfoInterface {
 			$key_store = $wpdb->insert( $table_name, $key_data );
 		}
 
-		if ( ! $key_store ) {
+		if ( false === $key_store ) {
 			throw new \Exception( 'Could not store the new key data in the database.' );
 		}
 	}
