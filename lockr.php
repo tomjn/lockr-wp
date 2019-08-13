@@ -9,7 +9,7 @@
 Plugin Name: Lockr
 Plugin URI: https://lockr.io/
 Description: Integrate with the Lockr hosted secrets management platform. Secure all your plugin passwords, API tokens and encryption keys according to industry best practices. With Lockr, secrets management is easy.
-Version: 3.1
+Version: 3.0.1
 Author: Lockr
 Author URI: htts://lockr.io/
 License: GPLv2 or later
