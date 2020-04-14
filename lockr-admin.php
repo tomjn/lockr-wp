@@ -83,7 +83,11 @@ function lockr_keys_table() {
 	$status          = lockr_check_registration();
 	$exists          = $status['keyring_label'] ? true : false;
 	$deleted_default = get_option( 'lockr_default_deleted' );
-	$auto_created    = (int) $default_key[0]->auto_created;
+	if ( $default_key ) {
+		$auto_created = (int) $default_key[0]->auto_created;
+	} else {
+		$auto_created = false;
+	}
 
 	if ( $exists && ! $default_key && ! $deleted_default ) {
 		// Create a default encryption key.
