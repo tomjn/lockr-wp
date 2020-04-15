@@ -25,11 +25,18 @@ function lockr_get_partner() {
 			Welcome to Lockr!
 EOL;
 
+		// Legacy path to Pantheon binding certs.
+		$cert_path = '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem';
+		if ( ! is_file( $cert_path ) ) {
+			// Pantheon's new containers has certs directory at root..
+			// TODO: When rollout is complete, the old path can be phased out.
+			$cert_path = '/certs/binding.pem';
+		}
 		return array(
 			'name'          => 'pantheon',
 			'title'         => 'Pantheon',
 			'description'   => $desc,
-			'cert'          => '/srv/bindings/' . PANTHEON_BINDING . '/certs/binding.pem',
+			'cert'          => $cert_path,
 			'force_prod'    => false,
 			'partner_certs' => true,
 		);

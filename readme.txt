@@ -2,7 +2,7 @@
 Contributors: cteitzel, tynor
 Tags: encrypt, secrets management, secrets, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
-Tested up to: 5.2
+Tested up to: 5.4
 Requires PHP: 5.5
 Stable tag: trunk
 License: GPLv2 or later
@@ -77,6 +77,13 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 
 == Changelog ==
+
+= 3.0.2 =
+**Attention Pantheon Users**
+This is a mandatory update for all Pantheon users. There is a change in the Pantheon filesystem which effects how the plugin authenticates to the Lockr Service. This will provide support for the new filesystem and ensure no disconnections occur as it is rolled out.
+
+= 3.0.1 =
+This is a minor release with a single fix to some issues reported with legacy keys created prior to our newest library release.
 
 = 3.0 =
 **Welcome to Lockr v2!**
