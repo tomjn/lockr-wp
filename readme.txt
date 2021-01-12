@@ -78,6 +78,9 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 == Changelog ==
 
+= 3.0.3 =
+This is a minor fix that cleans up an incompatibility with upcoming versions of PHP.
+
 = 3.0.2 =
 **Attention Pantheon Users**
 This is a mandatory update for all Pantheon users. There is a change in the Pantheon filesystem which effects how the plugin authenticates to the Lockr Service. This will provide support for the new filesystem and ensure no disconnections occur as it is rolled out.
