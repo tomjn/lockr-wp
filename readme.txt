@@ -2,7 +2,7 @@
 Contributors: cteitzel, tynor
 Tags: encrypt, secrets management, secrets, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
-Tested up to: 5.4
+Tested up to: 5.7
 Requires PHP: 5.5
 Stable tag: trunk
 License: GPLv2 or later
