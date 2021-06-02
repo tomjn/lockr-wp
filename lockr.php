@@ -429,7 +429,7 @@ function lockr_decrypt( $encoded ) {
 		return null;
 	}
 
-	if ( MCRYPT_RIJNDAEL_256 === $cipher ) {
+	if ( defined('MCRYPT_RIJNDAEL_256') && MCRYPT_RIJNDAEL_256 === $cipher ) {
 		if ( ! isset( $parts['mode'] ) ) {
 			return null;
 		}
