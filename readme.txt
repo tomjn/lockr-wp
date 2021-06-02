@@ -78,6 +78,9 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 == Changelog ==
 
+= 3.0.4 =
+This is a minor fix that cleans up an undefined constant for a deprecated extension.
+
 = 3.0.3 =
 This is a minor fix that cleans up an incompatibility with upcoming versions of PHP.
 
