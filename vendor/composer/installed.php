@@ -3,7 +3,7 @@
         'name' => 'wordpress/lockr',
         'pretty_version' => 'dev-trunk',
         'version' => 'dev-trunk',
-        'reference' => '370bf36b3ef62d55f54a5be47404ec140d5a42d5',
+        'reference' => '0e2680e60edf1a84bd24db8dc22edde773119bb6',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -163,7 +163,7 @@
         'wordpress/lockr' => array(
             'pretty_version' => 'dev-trunk',
             'version' => 'dev-trunk',
-            'reference' => '370bf36b3ef62d55f54a5be47404ec140d5a42d5',
+            'reference' => '0e2680e60edf1a84bd24db8dc22edde773119bb6',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

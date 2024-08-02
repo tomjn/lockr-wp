@@ -3,7 +3,7 @@ Contributors: cteitzel, tynor
 Tags: encrypt, secrets management, secrets, encryption, security, API, key, password, security, secure, locker
 Requires at least: 2.7
 Tested up to: 5.8
-Requires PHP: 5.5
+Requires PHP: 7.0
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -77,6 +77,11 @@ We know your keys are critical to your site. To ensure you have your keys whenev
 
 
 == Changelog ==
+
+= 3.0.5 =
+
+* Updated composer dependencies.
+* Minimum PHP version is now PHP 7.0.
 
 = 3.0.4 =
 This is a minor fix that cleans up an undefined constant for a deprecated extension.
