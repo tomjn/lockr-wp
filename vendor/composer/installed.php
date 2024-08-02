@@ -3,13 +3,22 @@
         'name' => 'wordpress/lockr',
         'pretty_version' => 'dev-trunk',
         'version' => 'dev-trunk',
-        'reference' => '9e42ee7a481abc79974b909df0f342b500586c62',
+        'reference' => '370bf36b3ef62d55f54a5be47404ec140d5a42d5',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
         'dev' => true,
     ),
     'versions' => array(
+        'composer/installers' => array(
+            'pretty_version' => 'v2.3.0',
+            'version' => '2.3.0.0',
+            'reference' => '12fb2dfe5e16183de69e784a7b84046c43d97e8e',
+            'type' => 'composer-plugin',
+            'install_path' => __DIR__ . '/./installers',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
         'defuse/php-encryption' => array(
             'pretty_version' => 'v2.4.0',
             'version' => '2.4.0.0',
@@ -154,7 +163,7 @@
         'wordpress/lockr' => array(
             'pretty_version' => 'dev-trunk',
             'version' => 'dev-trunk',
-            'reference' => '9e42ee7a481abc79974b909df0f342b500586c62',
+            'reference' => '370bf36b3ef62d55f54a5be47404ec140d5a42d5',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
